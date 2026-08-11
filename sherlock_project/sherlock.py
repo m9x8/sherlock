@@ -539,9 +539,25 @@ def handler(signal_received, frame):
 
 
 def main():
+    # If no CLI arguments are provided, launch the beautiful GUI interface automatically
+    if len(sys.argv) == 1:
+        try:
+            from sherlock_project.gui import main as gui_main
+            gui_main()
+            return
+        except Exception as e:
+            print(f"Failed to start GUI: {e}. Falling back to CLI help.")
+
     parser = ArgumentParser(
         formatter_class=RawDescriptionHelpFormatter,
         description=f"{__longname__} (Version {__version__})",
+    )
+    parser.add_argument(
+        "--gui",
+        action="store_true",
+        dest="start_gui",
+        default=False,
+        help="Launch the professional Sherlock graphical interface.",
     )
     parser.add_argument(
         "--version",
@@ -695,6 +711,15 @@ def main():
     )
 
     args = parser.parse_args()
+
+    if args.start_gui:
+        try:
+            from sherlock_project.gui import main as gui_main
+            gui_main()
+            return
+        except Exception as e:
+            print(f"Error launching GUI: {e}")
+            sys.exit(1)
 
     # If the user presses CTRL-C, exit gracefully without throwing errors
     signal.signal(signal.SIGINT, handler)

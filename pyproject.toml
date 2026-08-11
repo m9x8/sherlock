@@ -53,12 +53,17 @@ stem = "^1.8.0"
 pandas = "^2.2.1"
 openpyxl = "^3.0.10"
 tomli = "^2.2.1"
+phonenumbers = "^9.0.36"
+python-docx = "^1.2.0"
+customtkinter = "^6.0.0"
+reportlab = "^5.0.0"
 
 [tool.poetry.group.dev.dependencies]
 jsonschema = "^4.0.0"
 rstr = "^3.2.2"
 pytest = "^8.4.2"
 pytest-xdist = "^3.8.0"
+pyinstaller = {markers = "python_version < \"3.13\"", version = "^6.22.0"}
 
 
 [tool.poetry.group.ci.dependencies]
