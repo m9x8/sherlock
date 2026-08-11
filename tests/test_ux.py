@@ -41,3 +41,41 @@ def test_wildcard_username_expansion():
 def test_no_usernames_provided(cliargs):
     with pytest.raises(InteractivesSubprocessError, match=r"error: the following arguments are required: USERNAMES"):
         Interactives.run_cli(cliargs)
+
+def test_gui_textbox_url_tagging():
+    from unittest.mock import MagicMock
+    from sherlock_project.gui import SherlockGUI
+
+    # Create a mock textbox that behaves like ctk.CTkTextbox
+    textbox = MagicMock()
+
+    # Store inserted parts and tags
+    inserted_text = []
+    tags = []
+
+    def mock_insert(idx, text):
+        inserted_text.append(text)
+
+    def mock_index(idx):
+        return str(len("".join(inserted_text)))
+
+    def mock_tag_add(tag, start, end):
+        tags.append((tag, start, end))
+
+    textbox.insert = mock_insert
+    textbox.index = mock_index
+    textbox.tag_add = mock_tag_add
+
+    gui = MagicMock()
+
+    SherlockGUI._insert_text(gui, textbox, "Dit is een link: https://example.com en nog een https://test.org/user.")
+
+    # Check inserted text
+    full_content = "".join(inserted_text)
+    assert "https://example.com" in full_content
+    assert "https://test.org/user" in full_content
+
+    # Check that tags were applied on the expected link parts
+    assert len(tags) >= 2
+    assert tags[0][0] == "link"
+    assert tags[1][0] == "link"

@@ -10,6 +10,13 @@
   <br>
 </p>
 
+## GUI & Phone OSINT Features
+
+Sherlock includes a beautiful Graphical User Interface and a Phone Number OSINT lookup tool:
+- **Graphical Interface**: Run `sherlock --gui` to launch a fully professional graphical interface built with CustomTkinter.
+- **Phone Number OSINT**: Search for phone numbers, validate formats, retrieve carrier/geocoding metadata, and crawl the web for public mentions and social media accounts.
+- **Advanced Export options**: Generate report exports with scanning metadata in TXT, Microsoft Word (.docx), or custom styled PDFs.
+
 ## Usage
 
 ```console
