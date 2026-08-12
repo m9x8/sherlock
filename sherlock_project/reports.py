@@ -15,7 +15,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 class ReportGenerator:
     @staticmethod
-    def export_txt(filepath: str, username: str, results: Dict[str, Any], phone_meta: Dict[str, Any] = None, phone_results: Dict[str, Any] = None):
+    def export_txt(filepath: str, username: str, results: Dict[str, Any], phone_meta: Dict[str, Any] = None, phone_results: Dict[str, Any] = None, username_dorks: Dict[str, Any] = None):
         """
         Exports search results to a plain text (.txt) file.
         """
@@ -51,9 +51,7 @@ class ReportGenerator:
                 f.write("[ GEPASTELDE ACCOUNTS GEPAST ]\n")
                 claimed_count = 0
                 for site, info in results.items():
-                    # check if the result status is claimed
                     status_obj = info.get("status")
-                    # handle both QueryResult object or dictionary
                     status_str = ""
                     if hasattr(status_obj, "status"):
                         status_str = str(status_obj.status)
@@ -65,10 +63,24 @@ class ReportGenerator:
                         f.write(f"- {site}: {url_user}\n")
                         claimed_count += 1
 
-                f.write(f"\nTotaal gevonden accounts: {claimed_count}\n")
+                f.write(f"\nTotaal gevonden accounts: {claimed_count}\n\n")
+
+                if username_dorks:
+                    f.write("=" * 60 + "\n")
+                    f.write("                 GEAVANCEERDE GEBRUIKERSNAAM DORKS\n")
+                    f.write("=" * 60 + "\n\n")
+                    for category, items in username_dorks.items():
+                        f.write(f"[ {category.upper()} ]\n")
+                        if not items:
+                            f.write("Geen vermeldingen gevonden op internet.\n\n")
+                        else:
+                            for i, item in enumerate(items, 1):
+                                f.write(f" {i}. Titel:   {item.get('title')}\n")
+                                f.write(f"    Link:    {item.get('url')}\n")
+                                f.write(f"    Snippet: {item.get('snippet')}\n\n")
 
     @staticmethod
-    def export_docx(filepath: str, username: str, results: Dict[str, Any], phone_meta: Dict[str, Any] = None, phone_results: Dict[str, Any] = None):
+    def export_docx(filepath: str, username: str, results: Dict[str, Any], phone_meta: Dict[str, Any] = None, phone_results: Dict[str, Any] = None, username_dorks: Dict[str, Any] = None):
         """
         Exports search results to a Microsoft Word (.docx) file with structured scanning metadata.
         """
@@ -90,7 +102,6 @@ class ReportGenerator:
         row[1].text = now_str
 
         if phone_meta:
-            # Count phone matches
             matches_count = 0
             if phone_results:
                 for cat, items in phone_results.items():
@@ -143,7 +154,6 @@ class ReportGenerator:
                             p.add_run(f"Link: {item.get('url')}\n")
                             p.add_run(f"Snippet: {item.get('snippet')}\n")
         else:
-            # Count matches and scan duration
             claimed_count = 0
             max_duration = 0.0
             for site, info in results.items():
@@ -198,10 +208,24 @@ class ReportGenerator:
 
             doc.add_paragraph(f"\nTotaal aantal gevonden accounts: {claimed_count}")
 
+            if username_dorks:
+                doc.add_page_break()
+                doc.add_heading("Geavanceerde Dorking Resultaten", level=1)
+                for category, items in username_dorks.items():
+                    doc.add_heading(category, level=2)
+                    if not items:
+                        doc.add_paragraph("Geen online vermeldingen gevonden.")
+                    else:
+                        for item in items:
+                            p = doc.add_paragraph()
+                            p.add_run(f"Titel: {item.get('title')}\n").bold = True
+                            p.add_run(f"Link: {item.get('url')}\n")
+                            p.add_run(f"Snippet: {item.get('snippet')}\n")
+
         doc.save(filepath)
 
     @staticmethod
-    def export_pdf(filepath: str, username: str, results: Dict[str, Any], phone_meta: Dict[str, Any] = None, phone_results: Dict[str, Any] = None):
+    def export_pdf(filepath: str, username: str, results: Dict[str, Any], phone_meta: Dict[str, Any] = None, phone_results: Dict[str, Any] = None, username_dorks: Dict[str, Any] = None):
         """
         Generates a beautifully styled, professional PDF report using ReportLab.
         """
@@ -216,7 +240,7 @@ class ReportGenerator:
             parent=styles['Heading1'],
             fontName='Helvetica-Bold',
             fontSize=26,
-            textColor=colors.HexColor('#1A365D'), # Deep Navy Blue
+            textColor=colors.HexColor('#1A365D'),
             spaceAfter=15
         )
 
@@ -234,7 +258,7 @@ class ReportGenerator:
             parent=styles['Heading2'],
             fontName='Helvetica-Bold',
             fontSize=16,
-            textColor=colors.HexColor('#2B6CB0'), # Royal Blue
+            textColor=colors.HexColor('#2B6CB0'),
             spaceBefore=15,
             spaceAfter=10
         )
@@ -371,7 +395,7 @@ class ReportGenerator:
             story.append(Spacer(1, 20))
 
             if phone_results:
-                story.append(PageBreak()) # Clean page break for search results
+                story.append(PageBreak())
                 story.append(Paragraph("Online Vermeldingen & OSINT Resultaten", h1_style))
 
                 for category, items in phone_results.items():
@@ -383,7 +407,6 @@ class ReportGenerator:
                         story.append(Spacer(1, 10))
                     else:
                         for item in items:
-                            # Print result blocks professionally
                             res_text = f"<b>Titel:</b> {item.get('title')}<br/>" \
                                        f"<b>Link:</b> <font color='#3182CE'>{item.get('url')}</font><br/>" \
                                        f"<b>Snippet:</b> {item.get('snippet')}"
@@ -432,5 +455,184 @@ class ReportGenerator:
                 story.append(t)
                 story.append(Spacer(1, 20))
                 story.append(Paragraph(f"<b>Totaal gevonden accounts:</b> {claimed_count}", body_style))
+
+            if username_dorks:
+                story.append(PageBreak())
+                story.append(Paragraph("Geavanceerde Dorking Resultaten", h1_style))
+
+                for category, items in username_dorks.items():
+                    story.append(Paragraph(category, h2_style))
+                    story.append(Spacer(1, 5))
+
+                    if not items:
+                        story.append(Paragraph("Geen dorking vermeldingen gevonden.", body_style))
+                        story.append(Spacer(1, 10))
+                    else:
+                        for item in items:
+                            res_text = f"<b>Titel:</b> {item.get('title')}<br/>" \
+                                       f"<b>Link:</b> <font color='#3182CE'>{item.get('url')}</font><br/>" \
+                                       f"<b>Snippet:</b> {item.get('snippet')}"
+                            story.append(Paragraph(res_text, body_style))
+                            story.append(Spacer(1, 12))
+
+        doc.build(story)
+
+    @staticmethod
+    def export_company_txt(filepath: str, company_name: str, results: Dict[str, Any]):
+        """
+        Exports company search results to a plain text (.txt) file.
+        """
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write("=" * 60 + "\n")
+            f.write("                 SHERLOCK COMPANY OSINT REPORT\n")
+            f.write("=" * 60 + "\n\n")
+            f.write(f"Bedrijfsnaam: {company_name}\n\n")
+
+            for country, items in results.items():
+                f.write(f"[ LAND: {country.upper()} ]\n")
+                if not items:
+                    f.write("Geen registers gevonden voor dit land.\n\n")
+                else:
+                    for i, item in enumerate(items, 1):
+                        f.write(f" {i}. [{item.get('register')}] {item.get('title')}\n")
+                        f.write(f"    Link: {item.get('url')}\n")
+                        f.write(f"    Snippet: {item.get('snippet')}\n\n")
+
+    @staticmethod
+    def export_company_docx(filepath: str, company_name: str, results: Dict[str, Any]):
+        """
+        Exports company search results to a Microsoft Word (.docx) file.
+        """
+        doc = Document()
+        doc.add_heading("Sherlock Company OSINT Zoekrapport", level=0)
+
+        now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        doc.add_heading("Scan Metadata", level=1)
+        meta_table = doc.add_table(rows=1, cols=2)
+        meta_hdr = meta_table.rows[0].cells
+        meta_hdr[0].text = "Eigenschap"
+        meta_hdr[1].text = "Waarde"
+
+        row = meta_table.add_row().cells
+        row[0].text = "Scan Datum"
+        row[1].text = now_str
+
+        row = meta_table.add_row().cells
+        row[0].text = "Type Scan"
+        row[1].text = "Bedrijf OSINT & Register Zoekopdracht"
+
+        row = meta_table.add_row().cells
+        row[0].text = "Doelwit Bedrijf"
+        row[1].text = company_name
+
+        doc.add_paragraph()
+
+        for country, items in results.items():
+            doc.add_heading(f"Land: {country}", level=1)
+            if not items:
+                doc.add_paragraph("Geen registervermeldingen gevonden.")
+            else:
+                for item in items:
+                    p = doc.add_paragraph()
+                    p.add_run(f"[{item.get('register')}] {item.get('title')}\n").bold = True
+                    p.add_run(f"Link: {item.get('url')}\n")
+                    p.add_run(f"Snippet: {item.get('snippet')}\n")
+
+        doc.save(filepath)
+
+    @staticmethod
+    def export_company_pdf(filepath: str, company_name: str, results: Dict[str, Any]):
+        """
+        Generates a beautifully styled, professional PDF report for Company OSINT using ReportLab.
+        """
+        doc = SimpleDocTemplate(filepath, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
+        story = []
+
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle(
+            'ReportTitle',
+            parent=styles['Heading1'],
+            fontName='Helvetica-Bold',
+            fontSize=26,
+            textColor=colors.HexColor('#1A365D'),
+            spaceAfter=15
+        )
+
+        subtitle_style = ParagraphStyle(
+            'ReportSubtitle',
+            parent=styles['Normal'],
+            fontName='Helvetica-Oblique',
+            fontSize=12,
+            textColor=colors.HexColor('#4A5568'),
+            spaceAfter=30
+        )
+
+        h1_style = ParagraphStyle(
+            'SectionH1',
+            parent=styles['Heading2'],
+            fontName='Helvetica-Bold',
+            fontSize=16,
+            textColor=colors.HexColor('#2B6CB0'),
+            spaceBefore=15,
+            spaceAfter=10
+        )
+
+        body_style = ParagraphStyle(
+            'ReportBody',
+            parent=styles['BodyText'],
+            fontName='Helvetica',
+            fontSize=10,
+            textColor=colors.HexColor('#2D3748'),
+            leading=14
+        )
+
+        bold_body_style = ParagraphStyle(
+            'ReportBodyBold',
+            parent=body_style,
+            fontName='Helvetica-Bold'
+        )
+
+        # Header Title
+        story.append(Paragraph("Sherlock Company OSINT Rapport", title_style))
+        story.append(Paragraph(f"Doelwit Bedrijf: {company_name}", subtitle_style))
+        story.append(Spacer(1, 10))
+
+        now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        story.append(Paragraph("Scan Metadata", h1_style))
+        scan_meta_data = [
+            [Paragraph("Eigenschap", bold_body_style), Paragraph("Waarde", bold_body_style)],
+            [Paragraph("Scan Datum", body_style), Paragraph(now_str, body_style)],
+            [Paragraph("Type Scan", body_style), Paragraph("Bedrijf OSINT & Register Zoekopdracht", body_style)],
+            [Paragraph("Doelwit Bedrijf", body_style), Paragraph(company_name, body_style)]
+        ]
+
+        t_meta = Table(scan_meta_data, colWidths=[2.5 * inch, 4.5 * inch])
+        t_meta.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (1,0), colors.HexColor('#E2E8F0')),
+            ('TEXTCOLOR', (0,0), (-1,-1), colors.HexColor('#2D3748')),
+            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E0')),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F7FAFC')]),
+        ]))
+        story.append(t_meta)
+        story.append(Spacer(1, 20))
+
+        for country, items in results.items():
+            story.append(Paragraph(f"Land / Register: {country}", h1_style))
+            if not items:
+                story.append(Paragraph("Geen registervermeldingen gevonden.", body_style))
+                story.append(Spacer(1, 10))
+            else:
+                for item in items:
+                    res_text = f"<b>[{item.get('register')}] {item.get('title')}</b><br/>" \
+                               f"<b>Link:</b> <font color='#3182CE'>{item.get('url')}</font><br/>" \
+                               f"<b>Snippet:</b> {item.get('snippet')}"
+                    story.append(Paragraph(res_text, body_style))
+                    story.append(Spacer(1, 12))
 
         doc.build(story)
