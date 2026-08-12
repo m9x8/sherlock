@@ -79,7 +79,7 @@ if %errorlevel% neq 0 (
 )
 
 echo [+] Installeren van alle benodigde pakketten...
-%VENV_PYTHON% -m pip install customtkinter phonenumbers python-docx reportlab certifi colorama requests pandas openpyxl tomli requests-futures stem dnspython python-whois shodan holehe socialscan --quiet
+%VENV_PYTHON% -m pip install customtkinter phonenumbers python-docx reportlab certifi colorama requests pandas openpyxl tomli requests-futures stem dnspython python-whois shodan holehe socialscan duckduckgo-search --quiet
 if %errorlevel% neq 0 (
     echo [!] Fout: Installatie van benodigde pakketten via pip is mislukt.
     echo/ Controleer uw internetverbinding of proxyinstellingen.
