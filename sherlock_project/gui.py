@@ -2025,15 +2025,20 @@ class SherlockGUI(ctk.CTk):
             # Check if git is available and we are inside a git work tree
             git_check = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], capture_output=True, text=True)
             if git_check.returncode != 0:
-                raise RuntimeError("Niet in een Git-repository of Git is niet geïnstalleerd.")
+                raise RuntimeError("Not in a Git repository or Git is not installed.")
 
             default_branch = "Advance-osint"
 
             # Fetch target branch
-            subprocess.run(["git", "fetch", "origin", default_branch], check=True, capture_output=True, text=True)
+            fetch_res = subprocess.run(["git", "fetch", "origin", default_branch], capture_output=True, text=True)
+            if fetch_res.returncode != 0:
+                raise RuntimeError(f"Failed to fetch updates from remote repository. Check your internet connection or git permissions.\nDetails: {fetch_res.stderr.strip()}")
 
             # Check lagging commits count
-            res = subprocess.run(["git", "rev-list", "--count", f"HEAD..origin/{default_branch}"], check=True, capture_output=True, text=True)
+            res = subprocess.run(["git", "rev-list", "--count", f"HEAD..origin/{default_branch}"], capture_output=True, text=True)
+            if res.returncode != 0:
+                raise RuntimeError(f"Failed to check commit history.\nDetails: {res.stderr.strip()}")
+
             lagging_count = int(res.stdout.strip())
 
             if lagging_count > 0:
@@ -2069,11 +2074,20 @@ class SherlockGUI(ctk.CTk):
     def _run_install_update(self):
         try:
             default_branch = "Advance-osint"
-            subprocess.run(["git", "reset", "--hard", f"origin/{default_branch}"], check=True, capture_output=True, text=True)
-            subprocess.run([sys.executable, "-m", "pip", "install", "-e", "."], check=True, capture_output=True, text=True)
+
+            # Reset to origin branch
+            reset_res = subprocess.run(["git", "reset", "--hard", f"origin/{default_branch}"], capture_output=True, text=True)
+            if reset_res.returncode != 0:
+                raise RuntimeError(f"Failed to apply the update (git reset).\nDetails: {reset_res.stderr.strip()}")
+
+            # Install dependencies if needed
+            pip_res = subprocess.run([sys.executable, "-m", "pip", "install", "-e", "."], capture_output=True, text=True)
+            if pip_res.returncode != 0:
+                raise RuntimeError(f"Failed to install updated dependencies (pip install).\nDetails: {pip_res.stderr.strip()}")
+
             self.after(0, lambda: self._show_update_success_and_restart())
         except Exception as e:
-            self.after(0, lambda: messagebox.showerror(self.get_text("error"), f"Update failed: {e}"))
+            self.after(0, lambda err=e: messagebox.showerror(self.get_text("error"), f"Update failed: {err}"))
 
     def _show_update_success_and_restart(self):
         messagebox.showinfo(self.get_text("update_success_title"), self.get_text("update_success_msg"))
