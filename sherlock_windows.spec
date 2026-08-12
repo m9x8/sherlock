@@ -27,7 +27,8 @@ hidden_imports = [
     'whois',
     'shodan',
     'holehe',
-    'socialscan'
+    'socialscan',
+    'duckduckgo_search'
 ]
 
 a = Analysis(

@@ -11,6 +11,7 @@ import html
 import phonenumbers
 from phonenumbers import carrier, geocoder, timezone
 from typing import Dict, List, Any
+from duckduckgo_search import DDGS
 
 # A list of standard User-Agents to mimic real browsers and avoid blocking
 USER_AGENTS = [
@@ -103,57 +104,19 @@ class PhoneOSINT:
 
     def _duckduckgo_search(self, query: str) -> List[Dict[str, str]]:
         """
-        Performs a search on DuckDuckGo's HTML/Lite version to fetch results without JavaScript.
+        Performs a search using the professional and robust duckduckgo-search package
+        to bypass anomalies, CAPTCHAs, and bot-detection blocks on standard html endpoints.
         """
         results = []
         try:
-            url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
-            resp = self.session.get(url, timeout=self.timeout)
-            if resp.status_code == 200:
-                # DDG HTML structures results inside class="result results_links results_links_deep web-result "
-                # Let's extract them properly.
-                blocks = re.split(r'<div class="result results_links', resp.text)
-                for block in blocks[1:]:
-                    # Extract URL
-                    href_match = re.search(r'href="([^"]+)"[^>]*class="result__url"', block)
-                    if not href_match:
-                        href_match = re.search(r'<a class="result__snippet"[^>]*href="([^"]+)"', block) or re.search(r'class="result__snippet"[^>]*href="([^"]+)"', block)
-
-                    # Extract Title and Snippet
-                    title_match = re.search(r'<a class="result__snippet"[^>]*>(.*?)</a>', block, re.DOTALL) or re.search(r'<h2 class="result__title"[^>]*>(.*?)</h2>', block, re.DOTALL)
-                    snippet_match = re.search(r'<a class="result__snippet"[^>]*>(.*?)</a>', block, re.DOTALL) or re.search(r'<div class="result__snippet"[^>]*>(.*?)</div>', block, re.DOTALL)
-
-                    if href_match:
-                        raw_href = href_match.group(1)
-                        if "uddg=" in raw_href:
-                            parsed_url = urllib.parse.urlparse(raw_href)
-                            query_params = urllib.parse.parse_qs(parsed_url.query)
-                            url_str = query_params.get("uddg", [raw_href])[0]
-                        else:
-                            url_str = raw_href
-
-                        if url_str.startswith("//"):
-                            url_str = "https:" + url_str
-                        elif url_str.startswith("/"):
-                            continue
-
-                        title = "No Title"
-                        if title_match:
-                            title = re.sub(r'<[^>]+>', '', title_match.group(1)).strip()
-
-                        snippet = "No Snippet"
-                        if snippet_match:
-                            snippet = re.sub(r'<[^>]+>', '', snippet_match.group(1)).strip()
-
-                        title = html.unescape(title)
-                        snippet = html.unescape(snippet)
-                        url_str = html.unescape(url_str)
-
-                        results.append({
-                            "title": title,
-                            "url": url_str,
-                            "snippet": snippet
-                        })
+            with DDGS(timeout=self.timeout) as ddgs:
+                ddg_results = ddgs.text(query, max_results=30)
+                for r in ddg_results:
+                    results.append({
+                        "title": r.get("title", "No Title"),
+                        "url": r.get("href", ""),
+                        "snippet": r.get("body", "No Snippet")
+                    })
         except Exception as e:
             print(f"Error searching DuckDuckGo: {e}")
         return results
