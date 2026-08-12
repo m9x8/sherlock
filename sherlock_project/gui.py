@@ -123,7 +123,7 @@ TRANSLATIONS = {
         "email_header": "E-mailadres OSINT & Gekoppelde Accounts",
         "email_placeholder": "Voer een e-mailadres in (bijv. info@bedrijf.nl)...",
         "btn_start_email": "Start E-mail OSINT",
-        "network_header": "Domein, DNS & Netwerk OSINT Tracker",
+        "network_header": "Domein, DNS & Netwerk OSINT (incl. gratis IP-API/Shodan alternatief)",
         "network_placeholder": "Voer domein of IP in (bijv. bedrijf.nl of 8.8.8.8)...",
         "btn_start_network": "Start Netwerk OSINT",
         "person_header": "Personen Zoeken via Naam OSINT",
@@ -135,7 +135,7 @@ TRANSLATIONS = {
         "no_network_search_yet": "Er is nog geen domein/netwerk gezocht.",
         "no_person_search_yet": "Er is nog geen persoon gezocht.",
         "email_searching": "[*] Analyseren van e-mail '{email}' met holehe & socialscan...\n",
-        "network_searching": "[*] Analyseren van '{target}' via DNS, Whois & Shodan...\n",
+        "network_searching": "[*] Analyseren van '{target}' via DNS, Whois, IP-API & Shodan...\n",
         "person_searching": "[*] Zoeken naar persoon '{first} {last}' met geavanceerde dorks...\n",
         "search_stopped": "Zoekopdracht gestopt door gebruiker.",
         "shodan_api_label": "Shodan API Sleutel:",
@@ -230,7 +230,7 @@ TRANSLATIONS = {
         "email_header": "Email Address OSINT & Linked Accounts",
         "email_placeholder": "Enter an email address (e.g. info@company.com)...",
         "btn_start_email": "Start Email OSINT",
-        "network_header": "Domain, DNS & Network OSINT Tracker",
+        "network_header": "Domain, DNS & Network OSINT (incl. free IP-API/Shodan alternative)",
         "network_placeholder": "Enter domain or IP (e.g. company.com or 8.8.8.8)...",
         "btn_start_network": "Start Network OSINT",
         "person_header": "Person Search via Name OSINT",
@@ -242,7 +242,7 @@ TRANSLATIONS = {
         "no_network_search_yet": "No network search has been conducted yet.",
         "no_person_search_yet": "No person search has been conducted yet.",
         "email_searching": "[*] Analyzing email '{email}' with holehe & socialscan...\n",
-        "network_searching": "[*] Analyzing '{target}' via DNS, Whois & Shodan...\n",
+        "network_searching": "[*] Analyzing '{target}' via DNS, Whois, IP-API & Shodan...\n",
         "person_searching": "[*] Searching for person '{first} {last}' with advanced dorks...\n",
         "search_stopped": "Search stopped by user.",
         "shodan_api_label": "Shodan API Key:",
@@ -556,11 +556,11 @@ class SherlockGUI(ctk.CTk):
         textbox.tag_bind("link", "<Enter>", lambda e: textbox.configure(cursor="hand2"))
         textbox.tag_bind("link", "<Leave>", lambda e: textbox.configure(cursor="xterm"))
         # High-end text highlighting tags
-        textbox.tag_config("cyan", foreground="#00E5FF", font=ctk.CTkFont(weight="bold"))
-        textbox.tag_config("green", foreground="#38A169", font=ctk.CTkFont(weight="bold"))
-        textbox.tag_config("yellow", foreground="#D69E2E", font=ctk.CTkFont(weight="bold"))
-        textbox.tag_config("red", foreground="#E53E3E", font=ctk.CTkFont(weight="bold"))
-        textbox.tag_config("bold", font=ctk.CTkFont(weight="bold"))
+        textbox._textbox.tag_config("cyan", foreground="#00E5FF", font=ctk.CTkFont(weight="bold"))
+        textbox._textbox.tag_config("green", foreground="#38A169", font=ctk.CTkFont(weight="bold"))
+        textbox._textbox.tag_config("yellow", foreground="#D69E2E", font=ctk.CTkFont(weight="bold"))
+        textbox._textbox.tag_config("red", foreground="#E53E3E", font=ctk.CTkFont(weight="bold"))
+        textbox._textbox.tag_config("bold", font=ctk.CTkFont(weight="bold"))
 
     def _clear_textbox(self, textbox):
         textbox.configure(state="normal")
@@ -1608,7 +1608,36 @@ class SherlockGUI(ctk.CTk):
                 self._insert_text(self.text_network_results, f" Fout bij Whois lookup: {e}\n")
             self.progress_bar_network.set(0.6)
 
-        # 3. SHODAN Lookup
+        # 3. IP-API PASSIVE GEOLOCATION & NETWORK OSINT (Free Shodan Alternative)
+        if not self.stop_event.is_set():
+            self._insert_text(self.text_network_results, "\n[ IP-API PASSIVE GEOLOCATION & NETWORK OSINT ]\n")
+            try:
+                resolved_ip = target
+                try:
+                    resolved_ip = str(dns.resolver.resolve(target, 'A')[0])
+                except Exception:
+                    pass
+                from sherlock_project.headers import get_high_end_headers
+                headers = get_high_end_headers()
+                response = requests.get(f"http://ip-api.com/json/{resolved_ip}", headers=headers, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get("status") == "success":
+                        self._insert_text(self.text_network_results, f" IP Adres:      {data.get('query')}\n")
+                        self._insert_text(self.text_network_results, f" Land:          {data.get('country')} ({data.get('countryCode')})\n")
+                        self._insert_text(self.text_network_results, f" Regio/Stad:    {data.get('regionName')}, {data.get('city')}\n")
+                        self._insert_text(self.text_network_results, f" ISP:           {data.get('isp')}\n")
+                        self._insert_text(self.text_network_results, f" Organisatie:   {data.get('org')}\n")
+                        self._insert_text(self.text_network_results, f" AS / Netwerk:  {data.get('as')}\n")
+                        self._insert_text(self.text_network_results, f" Coördinaten:   Lat: {data.get('lat')}, Lon: {data.get('lon')}\n")
+                    else:
+                        self._insert_text(self.text_network_results, f" IP-API lookup mislukt: {data.get('message', 'Onbekende fout')}\n")
+                else:
+                    self._insert_text(self.text_network_results, f" IP-API lookup mislukt met status code: {response.status_code}\n")
+            except Exception as e:
+                self._insert_text(self.text_network_results, f" IP-API query mislukt: {e}\n")
+
+        # 4. SHODAN Lookup
         if not self.stop_event.is_set():
             self._insert_text(self.text_network_results, "\n[ SHODAN OPEN POORTEN & KWETSBAARHEDEN ]\n")
             shodan_key = self.settings.get("shodan_api_key", "").strip()
