@@ -52,10 +52,12 @@ def test_run_check_updates_up_to_date(mock_run):
     gui.language_var.get.return_value = "nl"
 
     # Mock subprocess to simulate lagging_count = 0 (up to date)
+    mock_git_check = MagicMock()
+    mock_git_check.returncode = 0
     mock_fetch = MagicMock()
     mock_rev_list = MagicMock()
     mock_rev_list.stdout = "0\n"
-    mock_run.side_effect = [mock_fetch, mock_rev_list]
+    mock_run.side_effect = [mock_git_check, mock_fetch, mock_rev_list]
 
     # Run check
     SherlockGUI._run_check_updates(gui)
@@ -76,10 +78,12 @@ def test_run_check_updates_available(mock_run):
     gui.language_var.get.return_value = "nl"
 
     # Mock subprocess to simulate lagging_count = 5 (update available)
+    mock_git_check = MagicMock()
+    mock_git_check.returncode = 0
     mock_fetch = MagicMock()
     mock_rev_list = MagicMock()
     mock_rev_list.stdout = "5\n"
-    mock_run.side_effect = [mock_fetch, mock_rev_list]
+    mock_run.side_effect = [mock_git_check, mock_fetch, mock_rev_list]
 
     # Run check
     SherlockGUI._run_check_updates(gui)

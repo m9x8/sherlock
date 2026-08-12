@@ -40,7 +40,7 @@ SETTINGS_FILE = os.path.expanduser("~/.sherlock_settings.json")
 
 TRANSLATIONS = {
     "nl": {
-        "title": "Sherlock Professional OSINT Suite",
+        "title": "No shit Sherlock Professional OSINT Suite",
         "tab_username": "Gebruikersnaam Zoeken",
         "tab_phone": "Telefoonnummer Zoeken",
         "tab_company": "Bedrijven Zoeken",
@@ -83,9 +83,9 @@ TRANSLATIONS = {
         "update_status_available": "Update beschikbaar!",
         "update_status_error": "Fout bij controleren van updates.",
         "update_prompt_title": "Update Beschikbaar",
-        "update_prompt_msg": "Er is een nieuwe update beschikbaar op de master branch. Wilt u deze nu installeren en de applicatie opnieuw opstarten?",
+        "update_prompt_msg": "Er is een nieuwe update beschikbaar ({commits} commit(s) achter) op de Advance-osint branch. Wilt u deze nu installeren en de applicatie opnieuw opstarten?",
         "update_success_title": "Update Succesvol",
-        "update_success_msg": "De applicatie is succesvol geüpdatet naar de nieuwste versie op master! De applicatie start nu opnieuw op.",
+        "update_success_msg": "De applicatie is succesvol geüpdatet naar de nieuwste versie op Advance-osint! De applicatie start nu opnieuw op.",
         "error": "Fout",
         "success": "Succes",
         "search_active_warning": "Er is momenteel al een zoekopdracht actief of stopgezet.",
@@ -139,7 +139,7 @@ TRANSLATIONS = {
         "shodan_api_placeholder": "Voer uw Shodan API-key in...",
     },
     "en": {
-        "title": "Sherlock Professional OSINT Suite",
+        "title": "No shit Sherlock Professional OSINT Suite",
         "tab_username": "Username Search",
         "tab_phone": "Phone Number Search",
         "tab_company": "Company Search",
@@ -182,9 +182,9 @@ TRANSLATIONS = {
         "update_status_available": "Update available!",
         "update_status_error": "Error checking for updates.",
         "update_prompt_title": "Update Available",
-        "update_prompt_msg": "A new update is available on the master branch. Do you want to install it now and restart the application?",
+        "update_prompt_msg": "A new update is available ({commits} commit(s) behind) on the Advance-osint branch. Do you want to install it now and restart the application?",
         "update_success_title": "Update Successful",
-        "update_success_msg": "The application has been successfully updated to the latest master version! The application will now restart.",
+        "update_success_msg": "The application has been successfully updated to the latest Advance-osint version! The application will now restart.",
         "error": "Error",
         "success": "Success",
         "search_active_warning": "A search is currently already active or stopping.",
@@ -433,7 +433,7 @@ class SherlockGUI(ctk.CTk):
         self.settings_title_lbl.configure(text=self.get_text("settings_title"))
         self.lang_section_lbl.configure(text=self.get_text("language_section"))
         self.updates_section_lbl.configure(text=self.get_text("updates_section"))
-        self.current_version_lbl.configure(text=f"{self.get_text('current_version')}: Sherlock v{__version__}")
+        self.current_version_lbl.configure(text=f"{self.get_text('current_version')}: No shit Sherlock v{__version__}")
         self.btn_check_updates.configure(text=self.get_text("btn_check_updates"))
         self.shodan_label.configure(text=self.get_text("shodan_api_label"))
         self.entry_shodan.configure(placeholder_text=self.get_text("shodan_api_placeholder"))
@@ -520,7 +520,7 @@ class SherlockGUI(ctk.CTk):
         self.sidebar.grid(row=0, column=0, sticky="nsew")
         self.sidebar.grid_rowconfigure(8, weight=1)
 
-        self.logo_label = ctk.CTkLabel(self.sidebar, text="SHERLOCK OSINT", font=ctk.CTkFont(size=20, weight="bold"))
+        self.logo_label = ctk.CTkLabel(self.sidebar, text="NO SHIT SHERLOCK", font=ctk.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
 
         # Sidebar Switching Tab buttons
@@ -1102,7 +1102,7 @@ class SherlockGUI(ctk.CTk):
         self.progress_bar.start()
 
         self._clear_textbox(self.text_username_results)
-        self._insert_text(self.text_username_results, f"[*] Initialiseren van Sherlock zoekopdracht voor '{username}'...\n\n")
+        self._insert_text(self.text_username_results, f"[*] Initialiseren van No shit Sherlock zoekopdracht voor '{username}'...\n\n")
 
         self._clear_textbox(self.text_username_dorks)
         self._insert_text(self.text_username_dorks, f"[*] Geavanceerde dorking wordt op de achtergrond uitgevoerd...\n")
@@ -1547,7 +1547,7 @@ class SherlockGUI(ctk.CTk):
     def _update_username_results_display(self):
         self._clear_textbox(self.text_username_results)
         if self.current_username:
-            self._insert_text(self.text_username_results, f"[*] Sherlock zoekopdracht resultaten voor '{self.current_username}':\n\n")
+            self._insert_text(self.text_username_results, f"[*] No shit Sherlock zoekopdracht resultaten voor '{self.current_username}':\n\n")
 
         filter_query = self.entry_filter_username.get().strip().lower()
         claimed_count = 0
@@ -1635,7 +1635,7 @@ class SherlockGUI(ctk.CTk):
         }
 
         extension = f".{file_format}"
-        initial_filename = f"sherlock_rapport_{target_name}{extension}".replace("+", "")
+        initial_filename = f"no_shit_sherlock_rapport_{target_name}{extension}".replace("+", "")
         filepath = filedialog.asksaveasfilename(
             defaultextension=extension,
             filetypes=[filetypes_map[file_format]],
@@ -1653,9 +1653,9 @@ class SherlockGUI(ctk.CTk):
                 elif is_company:
                     ReportGenerator.export_company_txt(filepath, self.current_company, self.company_results)
                 elif is_email:
-                    ReportGenerator.export_simple_txt(filepath, "Sherlock E-mail OSINT Rapport", f"E-mail: {self.current_email}", self.text_email_results.get("1.0", tk.END))
+                    ReportGenerator.export_simple_txt(filepath, "No shit Sherlock E-mail OSINT Rapport", f"E-mail: {self.current_email}", self.text_email_results.get("1.0", tk.END))
                 elif is_network:
-                    ReportGenerator.export_simple_txt(filepath, "Sherlock Netwerk & Domein OSINT", f"Domein/IP: {self.current_network}", self.text_network_results.get("1.0", tk.END))
+                    ReportGenerator.export_simple_txt(filepath, "No shit Sherlock Netwerk & Domein OSINT", f"Domein/IP: {self.current_network}", self.text_network_results.get("1.0", tk.END))
                 elif is_person:
                     ReportGenerator.export_company_txt(filepath, f"{self.current_person_first} {self.current_person_last}", self.person_results)
                 else:
@@ -1666,9 +1666,9 @@ class SherlockGUI(ctk.CTk):
                 elif is_company:
                     ReportGenerator.export_company_docx(filepath, self.current_company, self.company_results)
                 elif is_email:
-                    ReportGenerator.export_simple_docx(filepath, "Sherlock E-mail OSINT Rapport", f"E-mail: {self.current_email}", self.text_email_results.get("1.0", tk.END))
+                    ReportGenerator.export_simple_docx(filepath, "No shit Sherlock E-mail OSINT Rapport", f"E-mail: {self.current_email}", self.text_email_results.get("1.0", tk.END))
                 elif is_network:
-                    ReportGenerator.export_simple_docx(filepath, "Sherlock Netwerk & Domein OSINT", f"Domein/IP: {self.current_network}", self.text_network_results.get("1.0", tk.END))
+                    ReportGenerator.export_simple_docx(filepath, "No shit Sherlock Netwerk & Domein OSINT", f"Domein/IP: {self.current_network}", self.text_network_results.get("1.0", tk.END))
                 elif is_person:
                     ReportGenerator.export_company_docx(filepath, f"{self.current_person_first} {self.current_person_last}", self.person_results)
                 else:
@@ -1679,9 +1679,9 @@ class SherlockGUI(ctk.CTk):
                 elif is_company:
                     ReportGenerator.export_company_pdf(filepath, self.current_company, self.company_results)
                 elif is_email:
-                    ReportGenerator.export_simple_pdf(filepath, "Sherlock E-mail OSINT Rapport", f"E-mail: {self.current_email}", self.text_email_results.get("1.0", tk.END))
+                    ReportGenerator.export_simple_pdf(filepath, "No shit Sherlock E-mail OSINT Rapport", f"E-mail: {self.current_email}", self.text_email_results.get("1.0", tk.END))
                 elif is_network:
-                    ReportGenerator.export_simple_pdf(filepath, "Sherlock Netwerk & Domein OSINT", f"Domein/IP: {self.current_network}", self.text_network_results.get("1.0", tk.END))
+                    ReportGenerator.export_simple_pdf(filepath, "No shit Sherlock Netwerk & Domein OSINT", f"Domein/IP: {self.current_network}", self.text_network_results.get("1.0", tk.END))
                 elif is_person:
                     ReportGenerator.export_company_pdf(filepath, f"{self.current_person_first} {self.current_person_last}", self.person_results)
                 else:
@@ -1737,7 +1737,7 @@ class SherlockGUI(ctk.CTk):
         self.updates_section_lbl = ctk.CTkLabel(update_frame, text=self.get_text("updates_section"), font=ctk.CTkFont(size=14, weight="bold"))
         self.updates_section_lbl.grid(row=0, column=0, padx=15, pady=15, sticky="w")
 
-        self.current_version_lbl = ctk.CTkLabel(update_frame, text=f"{self.get_text('current_version')}: Sherlock v{__version__}", font=ctk.CTkFont(size=13))
+        self.current_version_lbl = ctk.CTkLabel(update_frame, text=f"{self.get_text('current_version')}: No shit Sherlock v{__version__}", font=ctk.CTkFont(size=13))
         self.current_version_lbl.grid(row=1, column=0, padx=15, pady=5, sticky="w")
 
         self.update_status_lbl = ctk.CTkLabel(update_frame, text=f"Status: {self.get_text('update_status_idle')}", font=ctk.CTkFont(size=13))
@@ -1762,21 +1762,37 @@ class SherlockGUI(ctk.CTk):
 
     def _run_check_updates(self):
         try:
-            subprocess.run(["git", "fetch", "origin", "master"], check=True, capture_output=True, text=True)
-            res = subprocess.run(["git", "rev-list", "--count", "HEAD..origin/master"], check=True, capture_output=True, text=True)
+            # Check if git is available and we are inside a git work tree
+            git_check = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], capture_output=True, text=True)
+            if git_check.returncode != 0:
+                raise RuntimeError("Niet in een Git-repository of Git is niet geïnstalleerd.")
+
+            default_branch = "Advance-osint"
+
+            # Fetch target branch
+            subprocess.run(["git", "fetch", "origin", default_branch], check=True, capture_output=True, text=True)
+
+            # Check lagging commits count
+            res = subprocess.run(["git", "rev-list", "--count", f"HEAD..origin/{default_branch}"], check=True, capture_output=True, text=True)
             lagging_count = int(res.stdout.strip())
 
             if lagging_count > 0:
-                self.after(0, lambda: self._update_available_action())
+                self.after(0, lambda count=lagging_count: self._update_available_action(count))
             else:
                 self.after(0, lambda: self._update_up_to_date_action())
         except Exception as e:
-            self.after(0, lambda: self._update_error_action(e))
+            err_msg = str(e)
+            self.after(0, lambda msg=err_msg: self._update_error_action(msg))
 
-    def _update_available_action(self):
-        self.update_status_lbl.configure(text=f"Status: {self.get_text('update_status_available')}")
+    def _update_available_action(self, lagging_count):
+        msg = f"{self.get_text('update_status_available')} ({lagging_count} commit(s) achter)"
+        self.update_status_lbl.configure(text=f"Status: {msg}")
         self.btn_check_updates.configure(state="normal")
-        response = messagebox.askyesno(self.get_text("update_prompt_title"), self.get_text("update_prompt_msg"))
+
+        prompt_title = self.get_text("update_prompt_title")
+        prompt_msg = self.get_text("update_prompt_msg").format(commits=lagging_count)
+
+        response = messagebox.askyesno(prompt_title, prompt_msg)
         if response:
             threading.Thread(target=self._run_install_update, daemon=True).start()
 
@@ -1792,7 +1808,8 @@ class SherlockGUI(ctk.CTk):
 
     def _run_install_update(self):
         try:
-            subprocess.run(["git", "reset", "--hard", "origin/master"], check=True, capture_output=True, text=True)
+            default_branch = "Advance-osint"
+            subprocess.run(["git", "reset", "--hard", f"origin/{default_branch}"], check=True, capture_output=True, text=True)
             subprocess.run([sys.executable, "-m", "pip", "install", "-e", "."], check=True, capture_output=True, text=True)
             self.after(0, lambda: self._show_update_success_and_restart())
         except Exception as e:

@@ -1,10 +1,10 @@
 @echo off
-title Sherlock OSINT Suite - Windows Installer ^& Launcher
+title No shit Sherlock - Windows Installer ^& Launcher
 :: Force shift to script's directory
 cd /d "%~dp0"
 
 echo ======================================================================
-echo           SHERLOCK OSINT SUITE (WINDOWS AUTOMATISCHE INSTALLATIE)
+echo           NO SHIT SHERLOCK (WINDOWS AUTOMATISCHE INSTALLATIE)
 echo ======================================================================
 echo.
 
@@ -79,7 +79,7 @@ if %errorlevel% neq 0 (
 )
 
 echo [+] Installeren van alle benodigde pakketten...
-%VENV_PYTHON% -m pip install customtkinter phonenumbers python-docx reportlab certifi colorama requests pandas openpyxl tomli requests-futures stem --quiet
+%VENV_PYTHON% -m pip install customtkinter phonenumbers python-docx reportlab certifi colorama requests pandas openpyxl tomli requests-futures stem dnspython python-whois shodan holehe socialscan --quiet
 if %errorlevel% neq 0 (
     echo [!] Fout: Installatie van benodigde pakketten via pip is mislukt.
     echo/ Controleer uw internetverbinding of proxyinstellingen.
@@ -99,7 +99,7 @@ if %errorlevel% neq 0 (
 )
 
 echo [+] Een snelkoppeling op uw Bureaublad aanmaken...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$desktop = [Environment]::GetFolderPath('Desktop'); $WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut(\"$desktop\Sherlock OSINT Suite.lnk\"); $Shortcut.TargetPath = '%~dp0run_gui.bat'; $Shortcut.WorkingDirectory = '%~dp0'; $Shortcut.IconLocation = 'shell32.dll,22'; $Shortcut.Save()" >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$desktop = [Environment]::GetFolderPath('Desktop'); $WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut(\"$desktop\No shit Sherlock.lnk\"); $Shortcut.TargetPath = '%~dp0run_gui.bat'; $Shortcut.WorkingDirectory = '%~dp0'; $Shortcut.IconLocation = 'shell32.dll,22'; $Shortcut.Save()" >nul 2>&1
 if %errorlevel% neq 0 (
     echo [!] Waarschuwing: Kon geen snelkoppeling op uw Bureaublad maken.
     echo Dit kan liggen aan uw PowerShell restricties of groepsbeleid.
@@ -111,8 +111,8 @@ if %errorlevel% neq 0 (
 echo.
 echo ======================================================================
 echo [+] Installatie succesvol voltooid!
-echo [+] Er is een snelkoppeling genaamd 'Sherlock OSINT Suite' op uw Bureaublad geplaatst.
-echo [+] De Sherlock GUI wordt nu opgestart...
+echo [+] Er is een snelkoppeling genaamd 'No shit Sherlock' op uw Bureaublad geplaatst.
+echo [+] De No shit Sherlock GUI wordt nu opgestart...
 echo ======================================================================
 echo.
 

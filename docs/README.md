@@ -38,13 +38,13 @@
 | `docker run -it --rm sherlock/sherlock` |
 | `dnf install sherlock-project` | |
 
-Community-maintained packages are available for Debian (>= 13), Ubuntu (>= 22.10), Homebrew, Kali, and BlackArch. These packages are not directly supported or maintained by the Sherlock Project.
+Community-maintained packages are available for Debian (>= 13), Ubuntu (>= 22.10), Homebrew, Kali, and BlackArch. These packages are not directly supported or maintained by the No shit Sherlock Project.
 
 See all alternative installation methods [here](https://sherlockproject.xyz/installation).
 
 ## Graphical User Interface (GUI) & Phone OSINT
 
-Sherlock now includes a fully-featured, modern CustomTkinter Graphical User Interface and a Phone Number OSINT & Tracking Suite!
+No shit Sherlock now includes a fully-featured, modern CustomTkinter Graphical User Interface and a Phone Number OSINT & Tracking Suite!
 
 ### Launching the GUI
 
@@ -82,7 +82,7 @@ usage: sherlock [-h] [--version] [--verbose] [--folderoutput FOLDEROUTPUT] [--ou
                 [--json JSON_FILE] [--timeout TIMEOUT] [--print-all] [--print-found] [--no-color] [--browse] [--local] [--nsfw] [--txt] [--ignore-exclusions]
                 USERNAMES [USERNAMES ...]
 
-Sherlock: Find Usernames Across Social Networks (Version 0.16.0)
+No shit Sherlock: Find Usernames Across Social Networks (Version 0.16.0)
 
 positional arguments:
   USERNAMES             One or more usernames to check with social networks. Check similar usernames using {?} (replace to '_', '-', '.').
@@ -117,7 +117,7 @@ options:
 
 ## Credits
 
-Thank you to everyone who has contributed to Sherlock! ❤️
+Thank you to everyone who has contributed to No shit Sherlock! ❤️
 
 <a href="https://github.com/sherlock-project/sherlock/graphs/contributors">
   <img src="https://contrib.rocks/image?&columns=25&max=10000&&repo=sherlock-project/sherlock" alt="contributors"/>

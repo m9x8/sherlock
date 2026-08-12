@@ -1,10 +1,10 @@
 @echo off
-title Sherlock OSINT Suite Launcher
+title No shit Sherlock Launcher
 :: Force shift to script's directory
 cd /d "%~dp0"
 
 echo ======================================================================
-echo                 SHERLOCK OSINT SUITE - GUI LAUNCHER
+echo                 NO SHIT SHERLOCK - GUI LAUNCHER
 echo ======================================================================
 echo.
 
@@ -31,7 +31,7 @@ if /i "%choice%"=="J" (
 
 :venv_exists
 echo [+] Virtuele omgeving gevonden!
-echo [+] Opstarten van Sherlock OSINT Suite GUI...
+echo [+] Opstarten van No shit Sherlock GUI...
 echo.
 
 .venv\Scripts\python.exe -m sherlock_project --gui
