@@ -539,8 +539,8 @@ def handler(signal_received, frame):
 
 
 def main():
-    # If no CLI arguments are provided, launch the beautiful GUI interface automatically
-    if len(sys.argv) == 1:
+    # If --gui is provided anywhere in the arguments or no arguments are provided, launch the GUI interface
+    if len(sys.argv) == 1 or "--gui" in sys.argv:
         try:
             from sherlock_project.gui import main as gui_main
             gui_main()
