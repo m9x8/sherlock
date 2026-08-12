@@ -1,13 +1,39 @@
 @echo off
 title Sherlock OSINT Suite - Windows Installer ^& Launcher
+:: Force shift to script's directory
+cd /d "%~dp0"
+
 echo ======================================================================
 echo           SHERLOCK OSINT SUITE (WINDOWS AUTOMATISCHE INSTALLATIE)
 echo ======================================================================
 echo.
 
-:: Check for Python Installation
+:: Detect Python executable
+set "PYTHON_EXE="
+
+:: 1. Try "python"
 python --version >nul 2>&1
-if %errorlevel% neq 0 (
+if %errorlevel% equ 0 (
+    set "PYTHON_EXE=python"
+    goto :python_found
+)
+
+:: 2. Try "py"
+py --version >nul 2>&1
+if %errorlevel% equ 0 (
+    set "PYTHON_EXE=py"
+    goto :python_found
+)
+
+:: 3. Try "python3"
+python3 --version >nul 2>&1
+if %errorlevel% equ 0 (
+    set "PYTHON_EXE=python3"
+    goto :python_found
+)
+
+:python_found
+if "%PYTHON_EXE%"=="" (
     echo [!] Fout: Python is niet gedetecteerd op uw systeem.
     echo Installeer Python 3.9 of hoger en vink "Add Python to PATH" aan in het installatieprogramma.
     echo Download link: https://www.python.org/downloads/
@@ -16,35 +42,71 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo [+] Python gedetecteerd!
+echo [+] Python gedetecteerd via commando: %PYTHON_EXE%
 
 :: Create local virtual environment if it does not exist
-if not exist .venv (
-    echo [+] Virtuele omgeving (.venv) aanmaken...
-    python -m venv .venv
-    if %errorlevel% neq 0 (
-        echo [!] Kon geen virtuele omgeving aanmaken. We proberen direct te installeren...
-    )
+if exist .venv goto :venv_created
+
+echo [+] Virtuele omgeving (.venv) aanmaken in de huidige map...
+%PYTHON_EXE% -m venv .venv
+if %errorlevel% neq 0 (
+    echo [!] Fout: Kon geen virtuele omgeving aanmaken via '%PYTHON_EXE% -m venv .venv'.
+    echo Probeer de installer handmatig uit te voeren als Administrator, of installeer 'venv' module.
+    echo.
+    pause
+    exit /b 1
 )
 
-:: Activate the environment
-if exist .venv\Scripts\activate.bat (
-    echo [+] Virtuele omgeving activeren...
-    call .venv\Scripts\activate.bat
+:venv_created
+:: Verify virtual environment python exists
+if not exist .venv\Scripts\python.exe (
+    echo [!] Fout: De virtuele omgeving is aangemaakt, maar .venv\Scripts\python.exe is niet gevonden.
+    echo Het lijkt erop dat de installatie is afgebroken of beschadigd.
+    echo Verwijder de map '.venv' en start dit script opnieuw.
+    echo.
+    pause
+    exit /b 1
 )
 
-echo [+] Updaten van pip...
-python -m pip install --upgrade pip --quiet
+echo [+] Virtuele omgeving met succes geverifieerd!
+
+set "VENV_PYTHON=.venv\Scripts\python.exe"
+
+echo [+] Updaten van pip in virtuele omgeving...
+%VENV_PYTHON% -m pip install --upgrade pip --quiet
+if %errorlevel% neq 0 (
+    echo [!] Waarschuwing: Updaten van pip is mislukt. We gaan door met de rest van de installatie...
+)
 
 echo [+] Installeren van alle benodigde pakketten...
-python -m pip install customtkinter phonenumbers python-docx reportlab certifi colorama requests pandas openpyxl tomli requests-futures stem --quiet
+%VENV_PYTHON% -m pip install customtkinter phonenumbers python-docx reportlab certifi colorama requests pandas openpyxl tomli requests-futures stem --quiet
+if %errorlevel% neq 0 (
+    echo [!] Fout: Installatie van benodigde pakketten via pip is mislukt.
+    echo/ Controleer uw internetverbinding of proxyinstellingen.
+    echo.
+    pause
+    exit /b 1
+)
 
 :: Also install local project in editable mode
-echo [+] Sherlock-pakket installeren...
-python -m pip install -e . --quiet
+echo [+] Sherlock-pakket installeren in editable mode...
+%VENV_PYTHON% -m pip install -e . --quiet
+if %errorlevel% neq 0 (
+    echo [!] Fout: Installatie van de lokale Sherlock-project module is mislukt.
+    echo.
+    pause
+    exit /b 1
+)
 
 echo [+] Een snelkoppeling op uw Bureaublad aanmaken...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$desktop = [Environment]::GetFolderPath('Desktop'); $WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut(\"$desktop\Sherlock OSINT Suite.lnk\"); $Shortcut.TargetPath = '%~dp0run_gui.bat'; $Shortcut.WorkingDirectory = '%~dp0'; $Shortcut.IconLocation = 'shell32.dll,22'; $Shortcut.Save()"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$desktop = [Environment]::GetFolderPath('Desktop'); $WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut(\"$desktop\Sherlock OSINT Suite.lnk\"); $Shortcut.TargetPath = '%~dp0run_gui.bat'; $Shortcut.WorkingDirectory = '%~dp0'; $Shortcut.IconLocation = 'shell32.dll,22'; $Shortcut.Save()" >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [!] Waarschuwing: Kon geen snelkoppeling op uw Bureaublad maken.
+    echo Dit kan liggen aan uw PowerShell restricties of groepsbeleid.
+    echo U kunt de applicatie nog steeds handmatig starten met 'run_gui.bat'.
+) else (
+    echo [+] Bureaubladsnelkoppeling succesvol aangemaakt!
+)
 
 echo.
 echo ======================================================================
@@ -54,6 +116,10 @@ echo [+] De Sherlock GUI wordt nu opgestart...
 echo ======================================================================
 echo.
 
-python -m sherlock_project --gui
-
-pause
+%VENV_PYTHON% -m sherlock_project --gui
+if %errorlevel% neq 0 (
+    echo [!] Fout: Er is een fout opgetreden tijdens het opstarten van de GUI.
+    echo Zie de foutmeldingen hierboven voor details.
+    echo.
+    pause
+)
