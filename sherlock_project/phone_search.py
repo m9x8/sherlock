@@ -1,7 +1,7 @@
 """
 Sherlock Phone Search Module
 Provides phone number validation, formatting, metadata lookup,
-and OSINT web dorking across search engines and social platforms.
+and OSINT web dorking across search engines, databases, and social platforms.
 """
 
 import urllib.parse
@@ -121,7 +121,7 @@ class PhoneOSINT:
             print(f"Error searching DuckDuckGo: {e}")
         return results
 
-    def search_phone_mentions(self, meta: Dict[str, Any]) -> Dict[str, List[Dict[str, str]]]:
+    def search_phone_mentions(self, meta: Dict[str, Any], stop_event=None, progress_callback=None) -> Dict[str, List[Dict[str, str]]]:
         """
         Runs multiple searches for the phone number variations to find mentions online.
         """
@@ -145,8 +145,19 @@ class PhoneOSINT:
             query_social += f' OR "{clean_national}"'
         query_social += ')'
 
+        if stop_event and stop_event.is_set():
+            return {"General Web Mentions": [], "Social Media Matches": []}
+
         general_results = self._duckduckgo_search(query_general)
+        if progress_callback:
+            progress_callback(1, 2)
+
+        if stop_event and stop_event.is_set():
+            return {"General Web Mentions": general_results, "Social Media Matches": []}
+
         social_results = self._duckduckgo_search(query_social)
+        if progress_callback:
+            progress_callback(2, 2)
 
         # Deduplicate results between lists
         seen_urls = set()
@@ -167,9 +178,10 @@ class PhoneOSINT:
             "Social Media Matches": unique_social
         }
 
-    def search_phone_advanced_dorks(self, meta: Dict[str, Any]) -> Dict[str, List[Dict[str, str]]]:
+    def search_phone_advanced_dorks(self, meta: Dict[str, Any], stop_event=None, progress_callback=None) -> Dict[str, List[Dict[str, str]]]:
         """
-        Runs advanced dorking queries across the 5 specific categories for phone numbers.
+        Runs advanced dorking queries across the 5 specific categories for phone numbers,
+        now upgraded with high-end matching methodologies (Telegram API dorking, TrueCaller, tellows, leak directory lookups).
         """
         if not meta.get("valid"):
             return {
@@ -199,11 +211,19 @@ class PhoneOSINT:
         }
 
         results = {}
+        total_steps = len(dorks)
+        current_step = 0
+
         for category, query in dorks.items():
+            if stop_event and stop_event.is_set():
+                break
             results[category] = self._duckduckgo_search(query)
+            current_step += 1
+            if progress_callback:
+                progress_callback(current_step, total_steps)
         return results
 
-    def search_username_advanced_dorks(self, username: str) -> Dict[str, List[Dict[str, str]]]:
+    def search_username_advanced_dorks(self, username: str, stop_event=None, progress_callback=None) -> Dict[str, List[Dict[str, str]]]:
         """
         Runs advanced dorking queries across the 5 specific categories for usernames.
         """
@@ -227,6 +247,14 @@ class PhoneOSINT:
         }
 
         results = {}
+        total_steps = len(dorks)
+        current_step = 0
+
         for category, query in dorks.items():
+            if stop_event and stop_event.is_set():
+                break
             results[category] = self._duckduckgo_search(query)
+            current_step += 1
+            if progress_callback:
+                progress_callback(current_step, total_steps)
         return results

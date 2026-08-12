@@ -489,9 +489,9 @@ class ReportGenerator:
             f.write(f"Bedrijfsnaam: {company_name}\n\n")
 
             for country, items in results.items():
-                f.write(f"[ LAND: {country.upper()} ]\n")
+                f.write(f"[ LAND/CATEGORIE: {country.upper()} ]\n")
                 if not items:
-                    f.write("Geen registers gevonden voor dit land.\n\n")
+                    f.write("Geen registers of vermeldingen gevonden voor dit land.\n\n")
                 else:
                     for i, item in enumerate(items, 1):
                         f.write(f" {i}. [{item.get('register')}] {item.get('title')}\n")
@@ -529,9 +529,9 @@ class ReportGenerator:
         doc.add_paragraph()
 
         for country, items in results.items():
-            doc.add_heading(f"Land: {country}", level=1)
+            doc.add_heading(f"Land/Categorie: {country}", level=1)
             if not items:
-                doc.add_paragraph("Geen registervermeldingen gevonden.")
+                doc.add_paragraph("Geen registervermeldingen of dorking hits gevonden.")
             else:
                 for item in items:
                     p = doc.add_paragraph()
@@ -623,9 +623,9 @@ class ReportGenerator:
         story.append(Spacer(1, 20))
 
         for country, items in results.items():
-            story.append(Paragraph(f"Land / Register: {country}", h1_style))
+            story.append(Paragraph(f"Categorie / Land: {country}", h1_style))
             if not items:
-                story.append(Paragraph("Geen registervermeldingen gevonden.", body_style))
+                story.append(Paragraph("Geen registervermeldingen of dorking hits gevonden.", body_style))
                 story.append(Spacer(1, 10))
             else:
                 for item in items:

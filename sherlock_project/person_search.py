@@ -14,8 +14,8 @@ class PersonOSINT:
 
     def search_person(self, first_name: str, last_name: str, extra_info: str = "", stop_event=None, progress_callback=None) -> Dict[str, List[Dict[str, str]]]:
         """
-        Runs advanced dorking queries across several categories using Google/DuckDuckGo
-        to find information about a person by First Name and Last Name.
+        Runs high-end name OSINT queries across several categories using DuckDuckGo
+        to locate exact matches on social profiles, resumes, news, directories, and leak platforms.
         """
         if not first_name or not last_name:
             return {}
@@ -28,13 +28,13 @@ class PersonOSINT:
         if extra_info:
             extra_query = f' AND "{extra_info}"'
 
-        # Categories for name dorks
+        # Expanded and precise categories for name dorks
         dorks = {
-            "Sociale Media & Profielen": f"(site:linkedin.com/in OR site:facebook.com OR site:instagram.com OR site:twitter.com OR site:x.com OR site:pinterest.com OR site:linktr.ee) {escaped_name}{extra_query}",
+            "Sociale Media & Profielen": f"(site:linkedin.com/in OR site:facebook.com OR site:instagram.com OR site:twitter.com OR site:x.com OR site:pinterest.com OR site:linktr.ee OR site:tiktok.com OR site:youtube.com OR site:github.com OR site:gravatar.com OR site:xing.com) {escaped_name}{extra_query}",
             "CV's & Resumes (Documenten)": f"(filetype:pdf OR filetype:doc OR filetype:docx) (resume OR cv OR \"curriculum vitae\" OR portfolio) {escaped_name}{extra_query}",
-            "Nieuws & Artikelen": f"(site:nieuws.nl OR site:telegraaf.nl OR site:nu.nl OR site:nos.nl OR site:ad.nl OR site:medium.com OR site:linkedin.com/pulse) {escaped_name}{extra_query}",
+            "Nieuws, Artikelen & Pers": f"(site:nieuws.nl OR site:telegraaf.nl OR site:nu.nl OR site:nos.nl OR site:ad.nl OR site:medium.com OR site:linkedin.com/pulse OR site:reuters.com OR site:bloomberg.com) {escaped_name}{extra_query}",
             "Bedrijfsconnecties & Directies": f"(site:kvk.nl OR site:opencorporates.com OR site:companyinfo.nl OR site:drimble.nl OR site:find-and-update.company-information.service.gov.uk) {escaped_name}{extra_query}",
-            "Lekken & Paste Vermeldingen": f"(site:pastebin.com OR site:paste.org OR site:paste.fo OR site:rentry.co OR site:github.com OR site:gitlab.com) {escaped_name}{extra_query}"
+            "Lekken, Paste & Code Gidsen": f"(site:pastebin.com OR site:paste.org OR site:paste.fo OR site:rentry.co OR site:github.com OR site:gitlab.com OR site:gitter.im) {escaped_name}{extra_query}"
         }
 
         results = {}
