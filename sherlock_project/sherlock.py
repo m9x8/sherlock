@@ -395,10 +395,10 @@ def sherlock(
         if error_text is not None:
             error_context = error_text
 
-        elif any(hitMsg in r.text for hitMsg in WAFHitMsgs):
+        elif r is not None and any(hitMsg in r.text for hitMsg in WAFHitMsgs):
             query_status = QueryStatus.WAF
 
-        else:
+        elif r is not None:
             if any(errtype not in ["message", "status_code", "response_url"] for errtype in error_type):
                 error_context = f"Unknown error type '{error_type}' for {social_network}"
                 query_status = QueryStatus.UNKNOWN

@@ -7,9 +7,6 @@ from sherlock_project.result import QueryStatus
 from colorama import Fore, Style
 import webbrowser
 
-# Global variable to count the number of results.
-globvar = 0
-
 
 class QueryNotify:
     """Query Notify Object.
