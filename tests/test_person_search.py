@@ -13,6 +13,7 @@ def test_person_osint_search():
     results = p.search_person("John", "Doe", "Amsterdam")
     assert "Sociale Media & Profielen" in results
     assert "CV's & Resumes (Documenten)" in results
+    assert "Nieuws, Artikelen & Pers" in results
     assert len(results["Sociale Media & Profielen"]) == 1
     assert results["Sociale Media & Profielen"][0]["title"] == "John Doe Profile"
 

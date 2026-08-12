@@ -2,7 +2,7 @@
 Sherlock GUI Module
 A beautiful, modern, responsive CustomTkinter interface
 for username hunting, phone number OSINT, company searches,
-e-mail lookups, domain/network OSINT, and name-based people search.
+e-mail lookups, domain/network OSINT, name-based people search, and deep-dive Dox profiling.
 """
 
 import sys
@@ -24,6 +24,7 @@ from sherlock_project.result import QueryStatus, QueryResult
 from sherlock_project.phone_search import PhoneOSINT
 from sherlock_project.company_search import CompanyOSINT
 from sherlock_project.person_search import PersonOSINT
+from sherlock_project.dox_search import DoxProfiler
 from sherlock_project.reports import ReportGenerator
 from sherlock_project import __version__
 
@@ -47,6 +48,7 @@ TRANSLATIONS = {
         "tab_email": "E-mail Zoeken",
         "tab_network": "Netwerk & Domein OSINT",
         "tab_person": "Personen Zoeken",
+        "tab_dox": "Dox Sectie",
         "tab_settings": "Instellingen",
         "theme": "Thema:",
         "username_header": "Hunt down Social Media Accounts",
@@ -137,6 +139,13 @@ TRANSLATIONS = {
         "search_stopped": "Zoekopdracht gestopt door gebruiker.",
         "shodan_api_label": "Shodan API Sleutel:",
         "shodan_api_placeholder": "Voer uw Shodan API-key in...",
+
+        # Dox Translations
+        "dox_header": "Dox & Doelwit OSINT Dossier Profiler",
+        "dox_btn_start": "Start Dox Profiler",
+        "no_dox_search_yet": "Er is nog geen dox-zoekopdracht uitgevoerd.",
+        "dox_searching": "[*] Bezig met samenstellen van dox-dossier...\n",
+        "dox_finished": "Dox Dossier succesvol gegenereerd!"
     },
     "en": {
         "title": "No shit Sherlock Professional OSINT Suite",
@@ -146,6 +155,7 @@ TRANSLATIONS = {
         "tab_email": "Email Search",
         "tab_network": "Network & Domain OSINT",
         "tab_person": "Person Search",
+        "tab_dox": "Dox Section",
         "tab_settings": "Settings",
         "theme": "Theme:",
         "username_header": "Hunt down Social Media Accounts",
@@ -236,6 +246,13 @@ TRANSLATIONS = {
         "search_stopped": "Search stopped by user.",
         "shodan_api_label": "Shodan API Key:",
         "shodan_api_placeholder": "Enter your Shodan API key...",
+
+        # Dox Translations
+        "dox_header": "Dox & Target OSINT Dossier Profiler",
+        "dox_btn_start": "Start Dox Profiler",
+        "no_dox_search_yet": "No dox search has been conducted yet.",
+        "dox_searching": "[*] Compiling dox dossier...\n",
+        "dox_finished": "Dox Dossier successfully generated!"
     }
 }
 
@@ -307,6 +324,7 @@ class SherlockGUI(ctk.CTk):
         self.phone_results = {}
         self.company_results = {}
         self.person_results = {}
+        self.dox_results = {}
         self.current_username = ""
         self.current_phone = ""
         self.current_company = ""
@@ -314,6 +332,13 @@ class SherlockGUI(ctk.CTk):
         self.current_network = ""
         self.current_person_first = ""
         self.current_person_last = ""
+
+        # Dox form fields
+        self.current_dox_username = ""
+        self.current_dox_email = ""
+        self.current_dox_phone = ""
+        self.current_dox_name = ""
+        self.current_dox_city = ""
 
         self.search_thread = None
         self.searching = False
@@ -352,11 +377,12 @@ class SherlockGUI(ctk.CTk):
         self.btn_email_tab.configure(text=self.get_text("tab_email"))
         self.btn_network_tab.configure(text=self.get_text("tab_network"))
         self.btn_person_tab.configure(text=self.get_text("tab_person"))
+        self.btn_dox_tab.configure(text=self.get_text("tab_dox"))
         self.btn_settings_tab.configure(text=self.get_text("tab_settings"))
         self.theme_label.configure(text=self.get_text("theme"))
 
         # Stop Buttons
-        for btn in [self.btn_stop_username, self.btn_stop_phone, self.btn_stop_company, self.btn_stop_email, self.btn_stop_network, self.btn_stop_person]:
+        for btn in [self.btn_stop_username, self.btn_stop_phone, self.btn_stop_company, self.btn_stop_email, self.btn_stop_network, self.btn_stop_person, self.btn_stop_dox]:
             btn.configure(text=self.get_text("btn_stop"))
 
         # Username Tab
@@ -414,6 +440,17 @@ class SherlockGUI(ctk.CTk):
         self.btn_search_person.configure(text=self.get_text("btn_start_person"))
         self.person_export_lbl.configure(text=self.get_text("export_report"))
         self.btn_export_person_pdf.configure(text=self.get_text("export_pdf"))
+
+        # Dox Tab
+        self.dox_title_lbl.configure(text=self.get_text("dox_header"))
+        self.entry_dox_username.configure(placeholder_text=self.get_text("username_placeholder"))
+        self.entry_dox_email.configure(placeholder_text=self.get_text("email_placeholder"))
+        self.entry_dox_phone.configure(placeholder_text=self.get_text("phone_placeholder"))
+        self.entry_dox_name.configure(placeholder_text=f"{self.get_text('first_name_placeholder')} {self.get_text('last_name_placeholder')}")
+        self.entry_dox_city.configure(placeholder_text=self.get_text("extra_info_placeholder"))
+        self.btn_search_dox.configure(text=self.get_text("dox_btn_start"))
+        self.dox_export_lbl.configure(text=self.get_text("export_report"))
+        self.btn_export_dox_pdf.configure(text=self.get_text("export_pdf"))
 
         # Company Combobox Filter values
         countries = [
@@ -518,38 +555,41 @@ class SherlockGUI(ctk.CTk):
         # Create Left Sidebar
         self.sidebar = ctk.CTkFrame(self, width=220, corner_radius=0)
         self.sidebar.grid(row=0, column=0, sticky="nsew")
-        self.sidebar.grid_rowconfigure(8, weight=1)
+        self.sidebar.grid_rowconfigure(9, weight=1)
 
         self.logo_label = ctk.CTkLabel(self.sidebar, text="NO SHIT SHERLOCK", font=ctk.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
 
         # Sidebar Switching Tab buttons
         self.btn_username_tab = ctk.CTkButton(self.sidebar, text=self.get_text("tab_username"), command=self.show_username_tab)
-        self.btn_username_tab.grid(row=1, column=0, padx=20, pady=7)
+        self.btn_username_tab.grid(row=1, column=0, padx=20, pady=5)
 
         self.btn_phone_tab = ctk.CTkButton(self.sidebar, text=self.get_text("tab_phone"), command=self.show_phone_tab)
-        self.btn_phone_tab.grid(row=2, column=0, padx=20, pady=7)
+        self.btn_phone_tab.grid(row=2, column=0, padx=20, pady=5)
 
         self.btn_company_tab = ctk.CTkButton(self.sidebar, text=self.get_text("tab_company"), command=self.show_company_tab)
-        self.btn_company_tab.grid(row=3, column=0, padx=20, pady=7)
+        self.btn_company_tab.grid(row=3, column=0, padx=20, pady=5)
 
         self.btn_email_tab = ctk.CTkButton(self.sidebar, text=self.get_text("tab_email"), command=self.show_email_tab)
-        self.btn_email_tab.grid(row=4, column=0, padx=20, pady=7)
+        self.btn_email_tab.grid(row=4, column=0, padx=20, pady=5)
 
         self.btn_network_tab = ctk.CTkButton(self.sidebar, text=self.get_text("tab_network"), command=self.show_network_tab)
-        self.btn_network_tab.grid(row=5, column=0, padx=20, pady=7)
+        self.btn_network_tab.grid(row=5, column=0, padx=20, pady=5)
 
         self.btn_person_tab = ctk.CTkButton(self.sidebar, text=self.get_text("tab_person"), command=self.show_person_tab)
-        self.btn_person_tab.grid(row=6, column=0, padx=20, pady=7)
+        self.btn_person_tab.grid(row=6, column=0, padx=20, pady=5)
+
+        self.btn_dox_tab = ctk.CTkButton(self.sidebar, text=self.get_text("tab_dox"), command=self.show_dox_tab)
+        self.btn_dox_tab.grid(row=7, column=0, padx=20, pady=5)
 
         self.btn_settings_tab = ctk.CTkButton(self.sidebar, text=self.get_text("tab_settings"), command=self.show_settings_tab)
-        self.btn_settings_tab.grid(row=7, column=0, padx=20, pady=7)
+        self.btn_settings_tab.grid(row=8, column=0, padx=20, pady=5)
 
         # Theme selection
         self.theme_label = ctk.CTkLabel(self.sidebar, text=self.get_text("theme"), font=ctk.CTkFont(size=12))
-        self.theme_label.grid(row=9, column=0, padx=20, pady=(10, 0), sticky="w")
+        self.theme_label.grid(row=10, column=0, padx=20, pady=(10, 0), sticky="w")
         self.theme_combo = ctk.CTkOptionMenu(self.sidebar, values=["Dark", "Light", "System"], command=self.change_appearance_mode)
-        self.theme_combo.grid(row=10, column=0, padx=20, pady=(5, 20))
+        self.theme_combo.grid(row=11, column=0, padx=20, pady=(5, 20))
 
         # Create Main Content Area
         self.main_container = ctk.CTkFrame(self, corner_radius=0)
@@ -564,6 +604,7 @@ class SherlockGUI(ctk.CTk):
         self.create_email_tab()
         self.create_network_tab()
         self.create_person_tab()
+        self.create_dox_tab()
         self.create_settings_tab()
 
         # Show initial tab
@@ -1000,6 +1041,76 @@ class SherlockGUI(ctk.CTk):
         self.btn_export_person_pdf = ctk.CTkButton(export_frame, text=self.get_text("export_pdf"), fg_color="#2B6CB0", hover_color="#1A365D", width=150, command=lambda: self.export_results("pdf", is_person=True))
         self.btn_export_person_pdf.grid(row=0, column=3, padx=10, pady=10)
 
+    def create_dox_tab(self):
+        self.tab_dox = ctk.CTkFrame(self.main_container, fg_color="transparent")
+        self.tab_dox.grid_rowconfigure(2, weight=1)
+        self.tab_dox.grid_columnconfigure(0, weight=1)
+
+        self.dox_title_lbl = ctk.CTkLabel(self.tab_dox, text=self.get_text("dox_header"), font=ctk.CTkFont(size=22, weight="bold"))
+        self.dox_title_lbl.grid(row=0, column=0, sticky="w", pady=(0, 10))
+
+        ctrl_frame = ctk.CTkFrame(self.tab_dox)
+        ctrl_frame.grid(row=1, column=0, sticky="ew", pady=10, padx=5)
+        ctrl_frame.grid_columnconfigure(0, weight=1)
+        ctrl_frame.grid_columnconfigure(1, weight=1)
+        ctrl_frame.grid_columnconfigure(2, weight=1)
+        ctrl_frame.grid_columnconfigure(3, weight=1)
+        ctrl_frame.grid_columnconfigure(4, weight=1)
+
+        # Deep Dox Form fields
+        self.entry_dox_username = ctk.CTkEntry(ctrl_frame, placeholder_text=self.get_text("username_placeholder"))
+        self.entry_dox_username.grid(row=0, column=0, padx=3, pady=10, sticky="ew")
+
+        self.entry_dox_email = ctk.CTkEntry(ctrl_frame, placeholder_text=self.get_text("email_placeholder"))
+        self.entry_dox_email.grid(row=0, column=1, padx=3, pady=10, sticky="ew")
+
+        self.entry_dox_phone = ctk.CTkEntry(ctrl_frame, placeholder_text=self.get_text("phone_placeholder"))
+        self.entry_dox_phone.grid(row=0, column=2, padx=3, pady=10, sticky="ew")
+
+        self.entry_dox_name = ctk.CTkEntry(ctrl_frame, placeholder_text=f"{self.get_text('first_name_placeholder')} {self.get_text('last_name_placeholder')}")
+        self.entry_dox_name.grid(row=0, column=3, padx=3, pady=10, sticky="ew")
+
+        self.entry_dox_city = ctk.CTkEntry(ctrl_frame, placeholder_text=self.get_text("extra_info_placeholder"))
+        self.entry_dox_city.grid(row=0, column=4, padx=3, pady=10, sticky="ew")
+
+        self.btn_search_dox = ctk.CTkButton(ctrl_frame, text=self.get_text("dox_btn_start"), width=150, fg_color="#2B6CB0", hover_color="#1A365D", command=self.start_dox_search)
+        self.btn_search_dox.grid(row=0, column=5, padx=5, pady=10)
+
+        self.btn_stop_dox = ctk.CTkButton(ctrl_frame, text=self.get_text("btn_stop"), fg_color="#C53030", hover_color="#9B2C2C", width=120, command=self.stop_all_searches)
+        self.btn_stop_dox.grid(row=0, column=6, padx=5, pady=10)
+
+        # Progress bar
+        self.progress_bar_dox = ctk.CTkProgressBar(self.tab_dox)
+        self.progress_bar_dox.grid(row=1, column=1, padx=10, pady=10)
+        self.progress_bar_dox.set(0)
+
+        # Results panel
+        results_panel = ctk.CTkFrame(self.tab_dox)
+        results_panel.grid(row=2, column=0, columnspan=2, sticky="nsew", pady=10)
+        results_panel.grid_rowconfigure(0, weight=1)
+        results_panel.grid_columnconfigure(0, weight=1)
+
+        self.text_dox_results = ctk.CTkTextbox(results_panel, font=ctk.CTkFont(size=13))
+        self.text_dox_results.grid(row=0, column=0, sticky="nsew", padx=15, pady=15)
+        self.text_dox_results.configure(state="disabled")
+        self._setup_textbox_tags(self.text_dox_results)
+
+        # Export row
+        export_frame = ctk.CTkFrame(self.tab_dox)
+        export_frame.grid(row=3, column=0, columnspan=2, sticky="ew", pady=10)
+
+        self.dox_export_lbl = ctk.CTkLabel(export_frame, text=self.get_text("export_report"), font=ctk.CTkFont(size=13, weight="bold"))
+        self.dox_export_lbl.grid(row=0, column=0, padx=15, pady=10)
+
+        self.btn_export_dox_txt = ctk.CTkButton(export_frame, text="TXT Rapport", width=120, command=lambda: self.export_results("txt", is_dox=True))
+        self.btn_export_dox_txt.grid(row=0, column=1, padx=10, pady=10)
+
+        self.btn_export_dox_docx = ctk.CTkButton(export_frame, text="Word (.docx)", width=120, command=lambda: self.export_results("docx", is_dox=True))
+        self.btn_export_dox_docx.grid(row=0, column=2, padx=10, pady=10)
+
+        self.btn_export_dox_pdf = ctk.CTkButton(export_frame, text=self.get_text("export_pdf"), fg_color="#2B6CB0", hover_color="#1A365D", width=150, command=lambda: self.export_results("pdf", is_dox=True))
+        self.btn_export_dox_pdf.grid(row=0, column=3, padx=10, pady=10)
+
     # Tab views switches
 
     def show_email_tab(self):
@@ -1008,6 +1119,7 @@ class SherlockGUI(ctk.CTk):
         self.tab_company.grid_remove()
         self.tab_network.grid_remove()
         self.tab_person.grid_remove()
+        self.tab_dox.grid_remove()
         self.tab_settings.grid_remove()
         self.tab_email.grid(row=0, column=0, sticky="nsew")
         self._set_active_button(self.btn_email_tab)
@@ -1018,6 +1130,7 @@ class SherlockGUI(ctk.CTk):
         self.tab_company.grid_remove()
         self.tab_email.grid_remove()
         self.tab_person.grid_remove()
+        self.tab_dox.grid_remove()
         self.tab_settings.grid_remove()
         self.tab_network.grid(row=0, column=0, sticky="nsew")
         self._set_active_button(self.btn_network_tab)
@@ -1028,9 +1141,21 @@ class SherlockGUI(ctk.CTk):
         self.tab_company.grid_remove()
         self.tab_email.grid_remove()
         self.tab_network.grid_remove()
+        self.tab_dox.grid_remove()
         self.tab_settings.grid_remove()
         self.tab_person.grid(row=0, column=0, sticky="nsew")
         self._set_active_button(self.btn_person_tab)
+
+    def show_dox_tab(self):
+        self.tab_username.grid_remove()
+        self.tab_phone.grid_remove()
+        self.tab_company.grid_remove()
+        self.tab_email.grid_remove()
+        self.tab_network.grid_remove()
+        self.tab_person.grid_remove()
+        self.tab_settings.grid_remove()
+        self.tab_dox.grid(row=0, column=0, sticky="nsew")
+        self._set_active_button(self.btn_dox_tab)
 
     def show_username_tab(self):
         self.tab_phone.grid_remove()
@@ -1038,6 +1163,7 @@ class SherlockGUI(ctk.CTk):
         self.tab_email.grid_remove()
         self.tab_network.grid_remove()
         self.tab_person.grid_remove()
+        self.tab_dox.grid_remove()
         self.tab_settings.grid_remove()
         self.tab_username.grid(row=0, column=0, sticky="nsew")
         self._set_active_button(self.btn_username_tab)
@@ -1048,6 +1174,7 @@ class SherlockGUI(ctk.CTk):
         self.tab_email.grid_remove()
         self.tab_network.grid_remove()
         self.tab_person.grid_remove()
+        self.tab_dox.grid_remove()
         self.tab_settings.grid_remove()
         self.tab_phone.grid(row=0, column=0, sticky="nsew")
         self._set_active_button(self.btn_phone_tab)
@@ -1058,6 +1185,7 @@ class SherlockGUI(ctk.CTk):
         self.tab_email.grid_remove()
         self.tab_network.grid_remove()
         self.tab_person.grid_remove()
+        self.tab_dox.grid_remove()
         self.tab_settings.grid_remove()
         self.tab_company.grid(row=0, column=0, sticky="nsew")
         self._set_active_button(self.btn_company_tab)
@@ -1069,11 +1197,12 @@ class SherlockGUI(ctk.CTk):
         self.tab_email.grid_remove()
         self.tab_network.grid_remove()
         self.tab_person.grid_remove()
+        self.tab_dox.grid_remove()
         self.tab_settings.grid(row=0, column=0, sticky="nsew")
         self._set_active_button(self.btn_settings_tab)
 
     def _set_active_button(self, active_btn):
-        for btn in [self.btn_username_tab, self.btn_phone_tab, self.btn_company_tab, self.btn_email_tab, self.btn_network_tab, self.btn_person_tab, self.btn_settings_tab]:
+        for btn in [self.btn_username_tab, self.btn_phone_tab, self.btn_company_tab, self.btn_email_tab, self.btn_network_tab, self.btn_person_tab, self.btn_dox_tab, self.btn_settings_tab]:
             if btn == active_btn:
                 btn.configure(fg_color="#1F538D")
             else:
@@ -1542,6 +1671,73 @@ class SherlockGUI(ctk.CTk):
         self.progress_bar_person.set(1.0)
         self.after(100, lambda: messagebox.showinfo(self.get_text("success"), "Personen OSINT lookup voltooid!"))
 
+    # DOX SEARCH
+
+    def start_dox_search(self):
+        if self.searching:
+            messagebox.showwarning(self.get_text("warning"), self.get_text("search_active_warning"))
+            return
+
+        username = self.entry_dox_username.get().strip()
+        email = self.entry_dox_email.get().strip()
+        phone = self.entry_dox_phone.get().strip()
+        name = self.entry_dox_name.get().strip()
+        city = self.entry_dox_city.get().strip()
+
+        if not any([username, email, phone, name, city]):
+            messagebox.showwarning(self.get_text("input_missing"), "Vul tenminste één formulier-veld in.")
+            return
+
+        self.searching = True
+        self.stop_event.clear()
+
+        self.current_dox_username = username
+        self.current_dox_email = email
+        self.current_dox_phone = phone
+        self.current_dox_name = name
+        self.current_dox_city = city
+
+        self.progress_bar_dox.set(0)
+
+        self._clear_textbox(self.text_dox_results)
+        self._insert_text(self.text_dox_results, self.get_text("dox_searching"))
+
+        threading.Thread(target=self._run_dox_search, daemon=True).start()
+
+    def _run_dox_search(self):
+        dp = DoxProfiler()
+
+        def update_progress(current, total):
+            fraction = float(current) / float(total)
+            self.progress_bar_dox.set(fraction)
+
+        results = dp.search_dox_dossier(
+            username=self.current_dox_username,
+            email=self.current_dox_email,
+            phone=self.current_dox_phone,
+            name=self.current_dox_name,
+            city=self.current_dox_city,
+            stop_event=self.stop_event,
+            progress_callback=update_progress
+        )
+        self.dox_results = results
+
+        self._clear_textbox(self.text_dox_results)
+        for category, items in results.items():
+            self._insert_text(self.text_dox_results, f"[ {category.upper()} ]\n")
+            if not items:
+                self._insert_text(self.text_dox_results, " Geen vermeldingen gevonden.\n\n")
+            else:
+                for item in items:
+                    self._insert_text(self.text_dox_results, f"• {item['title']}\n  Link: {item['url']}\n\n")
+
+        if self.stop_event.is_set():
+            self._insert_text(self.text_dox_results, f"\n{self.get_text('search_stopped')}\n")
+
+        self.searching = False
+        self.progress_bar_dox.set(1.0)
+        self.after(100, lambda: messagebox.showinfo(self.get_text("success"), self.get_text("dox_finished")))
+
     # Display update logic helpers
 
     def _update_username_results_display(self):
@@ -1594,7 +1790,7 @@ class SherlockGUI(ctk.CTk):
 
     # --- REPORT EXPORTS ---
 
-    def export_results(self, file_format, is_phone=False, is_company=False, is_email=False, is_network=False, is_person=False):
+    def export_results(self, file_format, is_phone=False, is_company=False, is_email=False, is_network=False, is_person=False, is_dox=False):
         # Resolve target and metadata names
         if is_phone:
             if not self.phone_meta:
@@ -1621,6 +1817,11 @@ class SherlockGUI(ctk.CTk):
                 messagebox.showwarning(self.get_text("error"), self.get_text("no_person_search_yet"))
                 return
             target_name = f"{self.current_person_first}_{self.current_person_last}"
+        elif is_dox:
+            if not self.dox_results:
+                messagebox.showwarning(self.get_text("error"), self.get_text("no_dox_search_yet"))
+                return
+            target_name = f"dox_dossier_{self.current_dox_name or self.current_dox_username or 'target'}"
         else:
             if not self.search_results:
                 messagebox.showwarning(self.get_text("error"), self.get_text("no_username_search_yet"))
@@ -1658,6 +1859,8 @@ class SherlockGUI(ctk.CTk):
                     ReportGenerator.export_simple_txt(filepath, "No shit Sherlock Netwerk & Domein OSINT", f"Domein/IP: {self.current_network}", self.text_network_results.get("1.0", tk.END))
                 elif is_person:
                     ReportGenerator.export_company_txt(filepath, f"{self.current_person_first} {self.current_person_last}", self.person_results)
+                elif is_dox:
+                    ReportGenerator.export_company_txt(filepath, f"Dox Dossier: {self.current_dox_name or self.current_dox_username}", self.dox_results)
                 else:
                     ReportGenerator.export_txt(filepath, self.current_username, self.search_results, username_dorks=self.username_dorks_results)
             elif file_format == "docx":
@@ -1671,6 +1874,8 @@ class SherlockGUI(ctk.CTk):
                     ReportGenerator.export_simple_docx(filepath, "No shit Sherlock Netwerk & Domein OSINT", f"Domein/IP: {self.current_network}", self.text_network_results.get("1.0", tk.END))
                 elif is_person:
                     ReportGenerator.export_company_docx(filepath, f"{self.current_person_first} {self.current_person_last}", self.person_results)
+                elif is_dox:
+                    ReportGenerator.export_company_docx(filepath, f"Dox Dossier: {self.current_dox_name or self.current_dox_username}", self.dox_results)
                 else:
                     ReportGenerator.export_docx(filepath, self.current_username, self.search_results, username_dorks=self.username_dorks_results)
             elif file_format == "pdf":
@@ -1684,6 +1889,8 @@ class SherlockGUI(ctk.CTk):
                     ReportGenerator.export_simple_pdf(filepath, "No shit Sherlock Netwerk & Domein OSINT", f"Domein/IP: {self.current_network}", self.text_network_results.get("1.0", tk.END))
                 elif is_person:
                     ReportGenerator.export_company_pdf(filepath, f"{self.current_person_first} {self.current_person_last}", self.person_results)
+                elif is_dox:
+                    ReportGenerator.export_company_pdf(filepath, f"Dox Dossier: {self.current_dox_name or self.current_dox_username}", self.dox_results)
                 else:
                     ReportGenerator.export_pdf(filepath, self.current_username, self.search_results, username_dorks=self.username_dorks_results)
 
