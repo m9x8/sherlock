@@ -20,10 +20,10 @@ def test_load_save_settings(tmp_path):
     with patch("sherlock_project.gui.SETTINGS_FILE", str(temp_settings_file)):
         # Default when file doesn't exist
         settings = load_settings()
-        assert settings == {"language": "nl"}
+        assert settings == {"language": "nl", "shodan_api_key": ""}
 
         # Save some settings
-        save_settings({"language": "en", "other_option": True})
+        save_settings({"language": "en", "shodan_api_key": "dummy_key", "other_option": True})
 
         # Load and verify
         settings_loaded = load_settings()
