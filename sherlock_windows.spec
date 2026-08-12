@@ -22,7 +22,12 @@ hidden_imports = [
     'reportlab.lib.styles',
     'pandas',
     'openpyxl',
-    'tomli'
+    'tomli',
+    'dns',
+    'whois',
+    'shodan',
+    'holehe',
+    'socialscan'
 ]
 
 a = Analysis(

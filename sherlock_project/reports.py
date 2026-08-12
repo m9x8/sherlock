@@ -21,7 +21,7 @@ class ReportGenerator:
         """
         with open(filepath, "w", encoding="utf-8") as f:
             f.write("=" * 60 + "\n")
-            f.write("                 SHERLOCK OSINT SEARCH REPORT\n")
+            f.write("                 NO SHIT SHERLOCK OSINT SEARCH REPORT\n")
             f.write("=" * 60 + "\n\n")
 
             if phone_meta:
@@ -85,7 +85,7 @@ class ReportGenerator:
         Exports search results to a Microsoft Word (.docx) file with structured scanning metadata.
         """
         doc = Document()
-        doc.add_heading("Sherlock OSINT Zoekrapport", level=0)
+        doc.add_heading("No shit Sherlock OSINT Zoekrapport", level=0)
 
         now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -295,7 +295,7 @@ class ReportGenerator:
         )
 
         # Header Title
-        story.append(Paragraph("Sherlock OSINT Onderzoeksrapport", title_style))
+        story.append(Paragraph("No shit Sherlock OSINT Onderzoeksrapport", title_style))
         if phone_meta:
             story.append(Paragraph(f"Doelwit Telefoonnummer: {phone_meta.get('international')}", subtitle_style))
         else:
@@ -484,7 +484,7 @@ class ReportGenerator:
         """
         with open(filepath, "w", encoding="utf-8") as f:
             f.write("=" * 60 + "\n")
-            f.write("                 SHERLOCK COMPANY OSINT REPORT\n")
+            f.write("                 NO SHIT SHERLOCK COMPANY OSINT REPORT\n")
             f.write("=" * 60 + "\n\n")
             f.write(f"Bedrijfsnaam: {company_name}\n\n")
 
@@ -504,7 +504,7 @@ class ReportGenerator:
         Exports company search results to a Microsoft Word (.docx) file.
         """
         doc = Document()
-        doc.add_heading("Sherlock Company OSINT Zoekrapport", level=0)
+        doc.add_heading("No shit Sherlock Company OSINT Zoekrapport", level=0)
 
         now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -595,7 +595,7 @@ class ReportGenerator:
         )
 
         # Header Title
-        story.append(Paragraph("Sherlock Company OSINT Rapport", title_style))
+        story.append(Paragraph("No shit Sherlock Company OSINT Rapport", title_style))
         story.append(Paragraph(f"Doelwit Bedrijf: {company_name}", subtitle_style))
         story.append(Spacer(1, 10))
 
@@ -634,5 +634,77 @@ class ReportGenerator:
                                f"<b>Snippet:</b> {item.get('snippet')}"
                     story.append(Paragraph(res_text, body_style))
                     story.append(Spacer(1, 12))
+
+        doc.build(story)
+
+    @staticmethod
+    def export_simple_txt(filepath: str, title: str, subtitle: str, content: str):
+        """
+        Exports a simple text report.
+        """
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write("=" * 60 + "\n")
+            f.write(f"                 {title.upper()}\n")
+            f.write("=" * 60 + "\n\n")
+            f.write(f"{subtitle}\n\n")
+            f.write(content)
+
+    @staticmethod
+    def export_simple_docx(filepath: str, title: str, subtitle: str, content: str):
+        """
+        Exports a simple Microsoft Word (.docx) report.
+        """
+        doc = Document()
+        doc.add_heading(title, level=0)
+        doc.add_paragraph(subtitle)
+        doc.add_paragraph()
+        doc.add_paragraph(content)
+        doc.save(filepath)
+
+    @staticmethod
+    def export_simple_pdf(filepath: str, title: str, subtitle: str, content: str):
+        """
+        Generates a beautifully styled, simple PDF report using ReportLab.
+        """
+        doc = SimpleDocTemplate(filepath, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
+        story = []
+
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle(
+            'ReportTitle',
+            parent=styles['Heading1'],
+            fontName='Helvetica-Bold',
+            fontSize=24,
+            textColor=colors.HexColor('#1A365D'),
+            spaceAfter=15
+        )
+
+        subtitle_style = ParagraphStyle(
+            'ReportSubtitle',
+            parent=styles['Normal'],
+            fontName='Helvetica-Oblique',
+            fontSize=12,
+            textColor=colors.HexColor('#4A5568'),
+            spaceAfter=30
+        )
+
+        body_style = ParagraphStyle(
+            'ReportBody',
+            parent=styles['BodyText'],
+            fontName='Helvetica',
+            fontSize=10,
+            textColor=colors.HexColor('#2D3748'),
+            leading=14
+        )
+
+        story.append(Paragraph(title, title_style))
+        story.append(Paragraph(subtitle, subtitle_style))
+        story.append(Spacer(1, 15))
+
+        for line in content.split("\n"):
+            escaped_line = line.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            story.append(Paragraph(escaped_line, body_style))
+            story.append(Spacer(1, 4))
 
         doc.build(story)
