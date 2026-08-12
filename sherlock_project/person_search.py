@@ -30,11 +30,11 @@ class PersonOSINT:
 
         # Expanded and precise categories for name dorks
         dorks = {
-            "Sociale Media & Profielen": f"(site:linkedin.com/in OR site:facebook.com OR site:instagram.com OR site:twitter.com OR site:x.com OR site:pinterest.com OR site:linktr.ee OR site:tiktok.com OR site:youtube.com OR site:github.com OR site:gravatar.com OR site:xing.com) {escaped_name}{extra_query}",
-            "CV's & Resumes (Documenten)": f"(filetype:pdf OR filetype:doc OR filetype:docx) (resume OR cv OR \"curriculum vitae\" OR portfolio) {escaped_name}{extra_query}",
-            "Nieuws, Artikelen & Pers": f"(site:nieuws.nl OR site:telegraaf.nl OR site:nu.nl OR site:nos.nl OR site:ad.nl OR site:medium.com OR site:linkedin.com/pulse OR site:reuters.com OR site:bloomberg.com) {escaped_name}{extra_query}",
-            "Bedrijfsconnecties & Directies": f"(site:kvk.nl OR site:opencorporates.com OR site:companyinfo.nl OR site:drimble.nl OR site:find-and-update.company-information.service.gov.uk) {escaped_name}{extra_query}",
-            "Lekken, Paste & Code Gidsen": f"(site:pastebin.com OR site:paste.org OR site:paste.fo OR site:rentry.co OR site:github.com OR site:gitlab.com OR site:gitter.im) {escaped_name}{extra_query}"
+            "Sociale Media & Profielen": f"(site:linkedin.com/in OR site:facebook.com OR site:instagram.com OR site:twitter.com OR site:x.com OR site:pinterest.com OR site:linktr.ee OR site:tiktok.com OR site:youtube.com OR site:github.com OR site:gravatar.com OR site:xing.com OR site:reddit.com/user OR site:flickr.com OR site:vimeo.com OR site:soundcloud.com OR site:behance.net) {escaped_name}{extra_query}",
+            "CV's & Resumes (Documenten)": f"(filetype:pdf OR filetype:doc OR filetype:docx OR filetype:xls OR filetype:xlsx OR filetype:rtf OR filetype:txt OR filetype:csv) (resume OR cv OR \"curriculum vitae\" OR portfolio OR bio OR biography OR \"personal profile\") {escaped_name}{extra_query}",
+            "Nieuws, Artikelen & Pers": f"(site:nieuws.nl OR site:telegraaf.nl OR site:nu.nl OR site:nos.nl OR site:ad.nl OR site:medium.com OR site:linkedin.com/pulse OR site:reuters.com OR site:bloomberg.com OR site:nytimes.com OR site:theguardian.com OR site:ft.com OR site:volkskrant.nl OR site:nrc.nl) {escaped_name}{extra_query}",
+            "Bedrijfsconnecties & Directies": f"(site:kvk.nl OR site:opencorporates.com OR site:companyinfo.nl OR site:drimble.nl OR site:find-and-update.company-information.service.gov.uk OR site:croco.nl OR site:staatsbladmonitor.be OR site:unternehmensregister.de OR site:apollo.io OR site:zoominfo.com OR site:rocketreach.co) {escaped_name}{extra_query}",
+            "Lekken, Paste & Code Gidsen": f"(site:pastebin.com OR site:paste.org OR site:paste.fo OR site:rentry.co OR site:github.com OR site:gitlab.com OR site:gitter.im OR site:controlc.com OR site:ghostbin.co OR site:pastelink.net OR site:leak-lookup.com OR site:dehashed.com) {escaped_name}{extra_query}"
         }
 
         results = {}

@@ -156,4 +156,20 @@ class CompanyOSINT:
             if stop_event and stop_event.is_set():
                 break
 
+        # Run direct OpenKVK scraper fallback if Nederland country was filter or general search
+        if not (stop_event and stop_event.is_set()) and country_filter in ["Alle", "Nederland"]:
+            from sherlock_project.scraper import HighEndScraper
+            try:
+                scraper = HighEndScraper()
+                direct_hits = scraper.scrape_company_direct_details(company_name)
+                if direct_hits:
+                    target_cat = "Officiële Registers (NL)" if "Officiële Registers (NL)" in results else "Officiële Registers"
+                    if target_cat not in results:
+                        results[target_cat] = []
+                    for dh in direct_hits:
+                        dh["register"] = "OpenKVK Direct"
+                    results[target_cat] = direct_hits + results[target_cat]
+            except Exception:
+                pass
+
         return results

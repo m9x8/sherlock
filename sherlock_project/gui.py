@@ -35,6 +35,7 @@ import shodan
 
 # Setup CustomTkinter Theme and Colors
 ctk.set_appearance_mode("Dark")
+# Load a custom modern, sophisticated dark/cyberpunk color theme with deep blues & clean grays
 ctk.set_default_color_theme("blue")
 
 SETTINGS_FILE = os.path.expanduser("~/.sherlock_settings.json")
@@ -531,7 +532,20 @@ class SherlockGUI(ctk.CTk):
                 end_index = textbox.index("insert")
                 textbox.tag_add("link", start_index, end_index)
             else:
+                start_index = textbox.index("insert")
                 textbox.insert("insert", part_text)
+                end_index = textbox.index("insert")
+                # Add highlighting tags for status prefixes/icons
+                if "[+]" in part_text or "✓" in part_text or "FOUND" in part_text or "Gevonden" in part_text:
+                    textbox.tag_add("green", start_index, end_index)
+                elif "[-]" in part_text or "✗" in part_text or "Niet Gevonden" in part_text:
+                    textbox.tag_add("yellow", start_index, end_index)
+                elif "[*]" in part_text:
+                    textbox.tag_add("cyan", start_index, end_index)
+                elif "Fout" in part_text or "Foutmelding" in part_text or "Error" in part_text:
+                    textbox.tag_add("red", start_index, end_index)
+                elif part_text.startswith("[ ") and part_text.endswith(" ]\n"):
+                    textbox.tag_add("bold", start_index, end_index)
 
         textbox.see("insert")
         textbox.configure(state="disabled")
@@ -541,6 +555,12 @@ class SherlockGUI(ctk.CTk):
         textbox.tag_bind("link", "<Button-1>", self._on_link_click)
         textbox.tag_bind("link", "<Enter>", lambda e: textbox.configure(cursor="hand2"))
         textbox.tag_bind("link", "<Leave>", lambda e: textbox.configure(cursor="xterm"))
+        # High-end text highlighting tags
+        textbox.tag_config("cyan", foreground="#00E5FF", font=ctk.CTkFont(weight="bold"))
+        textbox.tag_config("green", foreground="#38A169", font=ctk.CTkFont(weight="bold"))
+        textbox.tag_config("yellow", foreground="#D69E2E", font=ctk.CTkFont(weight="bold"))
+        textbox.tag_config("red", foreground="#E53E3E", font=ctk.CTkFont(weight="bold"))
+        textbox.tag_config("bold", font=ctk.CTkFont(weight="bold"))
 
     def _clear_textbox(self, textbox):
         textbox.configure(state="normal")
@@ -557,8 +577,12 @@ class SherlockGUI(ctk.CTk):
         self.sidebar.grid(row=0, column=0, sticky="nsew")
         self.sidebar.grid_rowconfigure(9, weight=1)
 
-        self.logo_label = ctk.CTkLabel(self.sidebar, text="NO SHIT SHERLOCK", font=ctk.CTkFont(size=20, weight="bold"))
+        self.logo_label = ctk.CTkLabel(self.sidebar, text="NO SHIT SHERLOCK", font=ctk.CTkFont(family="Helvetica", size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
+
+        # Subtitle for high-end feel
+        self.logo_sub = ctk.CTkLabel(self.sidebar, text="PRO OSINT INTELLIGENCE", font=ctk.CTkFont(family="Helvetica", size=10, weight="bold"), text_color="#718096")
+        self.logo_sub.grid(row=0, column=0, padx=20, pady=(45, 10))
 
         # Sidebar Switching Tab buttons
         self.btn_username_tab = ctk.CTkButton(self.sidebar, text=self.get_text("tab_username"), command=self.show_username_tab)
