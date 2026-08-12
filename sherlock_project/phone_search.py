@@ -11,23 +11,33 @@ import html
 import phonenumbers
 from phonenumbers import carrier, geocoder, timezone
 from typing import Dict, List, Any
-from duckduckgo_search import DDGS
 
-# A list of standard User-Agents to mimic real browsers and avoid blocking
-USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0"
-]
+# Suppress the duckduckgo_search renaming RuntimeWarning before importing DDGS
+import warnings
+import sys
+try:
+    import duckduckgo_search
+    # Intercept and disable the specific RuntimeWarning regarding renaming
+    _orig_warn = warnings.warn
+    def _patched_warn(message, category=None, stacklevel=1, *args, **kwargs):
+        if category == RuntimeWarning and "duckduckgo_search" in str(message):
+            return
+        return _orig_warn(message, category, stacklevel, *args, **kwargs)
+    warnings.warn = _patched_warn
+    # Also patch inside the duckduckgo_search module's namespace if already bound
+    if hasattr(duckduckgo_search, "duckduckgo_search"):
+        duckduckgo_search.duckduckgo_search.warnings.warn = _patched_warn
+except Exception:
+    pass
+
+from duckduckgo_search import DDGS
+from sherlock_project.headers import get_high_end_headers
 
 class PhoneOSINT:
     def __init__(self, timeout: int = 15):
         self.timeout = timeout
         self.session = requests.Session()
-        self.session.headers.update({
-            "User-Agent": USER_AGENTS[0],
-            "Accept-Language": "en-US,en;q=0.9,nl;q=0.8"
-        })
+        self.session.headers.update(get_high_end_headers())
 
     def validate_and_meta(self, phone_str: str, default_region: str = "NL") -> Dict[str, Any]:
         """
@@ -106,8 +116,10 @@ class PhoneOSINT:
         """
         Performs a search using the professional and robust duckduckgo-search package
         to bypass anomalies, CAPTCHAs, and bot-detection blocks on standard html endpoints.
+        If it fails, automatically falls back to raw HTML/Lite scraping via high-end headers.
         """
         results = []
+        # Attempt standard library search first
         try:
             with DDGS(timeout=self.timeout) as ddgs:
                 ddg_results = ddgs.text(query, max_results=30)
@@ -118,7 +130,51 @@ class PhoneOSINT:
                         "snippet": r.get("body", "No Snippet")
                     })
         except Exception as e:
-            print(f"Error searching DuckDuckGo: {e}")
+            print(f"DuckDuckGo API search error: {e}. Switching to high-end direct HTML scraping...")
+
+        # Premium high-end fallback: scrape DuckDuckGo Lite directly
+        if not results:
+            try:
+                from bs4 import BeautifulSoup
+                from sherlock_project.headers import get_high_end_headers
+                url = "https://lite.duckduckgo.com/lite/"
+                headers = get_high_end_headers(referer="https://duckduckgo.com/")
+                # Use a requests session to persist cookies and bypass bot detection
+                session = requests.Session()
+                # Get the initial page first
+                session.get("https://duckduckgo.com/", headers=headers, timeout=self.timeout)
+                # Query the lite search endpoint
+                data = {"q": query}
+                response = session.post(url, headers=headers, data=data, timeout=self.timeout)
+                if response.status_code == 200:
+                    soup = BeautifulSoup(response.text, "html.parser")
+                    # Result rows in duckduckgo lite are table rows (tr)
+                    rows = soup.find_all("td", class_="result-snippet")
+                    for row in rows:
+                        # The link and title are usually in the previous sibling or nearby td elements
+                        tr = row.find_parent("tr")
+                        if tr:
+                            prev_tr = tr.find_previous_sibling("tr")
+                            if prev_tr:
+                                link_tag = prev_tr.find("a", class_="result-link")
+                                if link_tag:
+                                    title = link_tag.get_text(strip=True)
+                                    href = link_tag.get("href")
+                                    # Resolve relative link if any
+                                    if href and href.startswith("//"):
+                                        href = "https:" + href
+                                    elif href and href.startswith("/"):
+                                        href = "https://duckduckgo.com" + href
+
+                                    snippet = row.get_text(strip=True)
+                                    results.append({
+                                        "title": title or "No Title",
+                                        "url": href or "",
+                                        "snippet": snippet or "No Snippet"
+                                    })
+            except Exception as fe:
+                print(f"Direct HTML fallback search failed: {fe}")
+
         return results
 
     def search_phone_mentions(self, meta: Dict[str, Any], stop_event=None, progress_callback=None) -> Dict[str, List[Dict[str, str]]]:
@@ -211,7 +267,7 @@ class PhoneOSINT:
         }
 
         results = {}
-        total_steps = len(dorks)
+        total_steps = len(dorks) + 1  # include real-time scraper step
         current_step = 0
 
         for category, query in dorks.items():
@@ -221,6 +277,24 @@ class PhoneOSINT:
             current_step += 1
             if progress_callback:
                 progress_callback(current_step, total_steps)
+
+        # Run high-end direct scraper for Adresboeken & Spam-registries
+        if not (stop_event and stop_event.is_set()):
+            from sherlock_project.scraper import HighEndScraper
+            try:
+                scraper = HighEndScraper(timeout=self.timeout)
+                scraped_hits = scraper.scrape_phone_nl_registries(clean_national or e164)
+                if scraped_hits:
+                    if "Adresboeken & Spam-registries" not in results:
+                        results["Adresboeken & Spam-registries"] = []
+                    # Append direct scraped live results to the start of the list
+                    results["Adresboeken & Spam-registries"] = scraped_hits + results["Adresboeken & Spam-registries"]
+            except Exception:
+                pass
+            current_step += 1
+            if progress_callback:
+                progress_callback(current_step, total_steps)
+
         return results
 
     def search_username_advanced_dorks(self, username: str, stop_event=None, progress_callback=None) -> Dict[str, List[Dict[str, str]]]:
