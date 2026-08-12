@@ -160,7 +160,7 @@ class PhoneOSINT:
 
     def search_phone_mentions(self, meta: Dict[str, Any]) -> Dict[str, List[Dict[str, str]]]:
         """
-        Runs multiple searches for the phone number variatons to find mentions online.
+        Runs multiple searches for the phone number variations to find mentions online.
         """
         if not meta.get("valid"):
             return {"General Web Mentions": [], "Social Media Matches": []}
@@ -203,3 +203,67 @@ class PhoneOSINT:
             "General Web Mentions": unique_general,
             "Social Media Matches": unique_social
         }
+
+    def search_phone_advanced_dorks(self, meta: Dict[str, Any]) -> Dict[str, List[Dict[str, str]]]:
+        """
+        Runs advanced dorking queries across the 5 specific categories for phone numbers.
+        """
+        if not meta.get("valid"):
+            return {
+                "Lek- & Paste-sites": [],
+                "Documenten & Resumes": [],
+                "Professionele Netwerken": [],
+                "Chat- & Messenger-groepen": [],
+                "Adresboeken & Spam-registries": []
+            }
+
+        e164 = meta["e164"]
+        national = meta["national"]
+        international = meta["international"]
+        clean_national = re.sub(r"[^\d]", "", national)
+
+        terms = [f'"{e164}"', f'"{international}"', f'"{national}"']
+        if clean_national:
+            terms.append(f'"{clean_national}"')
+        terms_or = " OR ".join(terms)
+
+        dorks = {
+            "Lek- & Paste-sites": f"(site:pastebin.com OR site:paste.org OR site:github.com OR site:gitlab.com OR site:gitter.im OR site:paste2.org OR site:ghostbin.co) ({terms_or})",
+            "Documenten & Resumes": f"(filetype:pdf OR filetype:doc OR filetype:docx OR filetype:xls OR filetype:xlsx OR filetype:rtf OR filetype:txt) ({terms_or})",
+            "Professionele Netwerken": f"(site:linkedin.com/in OR site:linkedin.com/pub OR site:xing.com OR site:rocketreach.co OR site:apollo.io OR site:zoominfo.com) ({terms_or})",
+            "Chat- & Messenger-groepen": f"(site:t.me OR site:chat.whatsapp.com OR site:discord.gg OR site:signal.group OR site:line.me) ({terms_or})",
+            "Adresboeken & Spam-registries": f"(site:tellows.nl OR site:tellows.com OR site:sync.me OR site:truecaller.com OR site:whocalledme.com OR site:wieheeftgebeld.nl OR site:telefoonboek.nl OR site:openingstijden.nl) ({terms_or})"
+        }
+
+        results = {}
+        for category, query in dorks.items():
+            results[category] = self._duckduckgo_search(query)
+        return results
+
+    def search_username_advanced_dorks(self, username: str) -> Dict[str, List[Dict[str, str]]]:
+        """
+        Runs advanced dorking queries across the 5 specific categories for usernames.
+        """
+        if not username:
+            return {
+                "Lek- & Paste-sites": [],
+                "Documenten & Resumes": [],
+                "Professionele Netwerken": [],
+                "Chat- & Messenger-groepen": [],
+                "Adresboeken & Spam-registries": []
+            }
+
+        escaped_username = f'"{username}"'
+
+        dorks = {
+            "Lek- & Paste-sites": f"(site:pastebin.com OR site:paste.org OR site:github.com OR site:gitlab.com OR site:gitter.im OR site:paste2.org OR site:ghostbin.co) {escaped_username}",
+            "Documenten & Resumes": f"(filetype:pdf OR filetype:doc OR filetype:docx OR filetype:xls OR filetype:xlsx OR filetype:rtf OR filetype:txt) {escaped_username}",
+            "Professionele Netwerken": f"(site:linkedin.com/in OR site:linkedin.com/pub OR site:xing.com OR site:rocketreach.co OR site:apollo.io OR site:zoominfo.com) {escaped_username}",
+            "Chat- & Messenger-groepen": f"(site:t.me OR site:chat.whatsapp.com OR site:discord.gg OR site:signal.group OR site:line.me) {escaped_username}",
+            "Adresboeken & Spam-registries": f"(site:tellows.nl OR site:tellows.com OR site:sync.me OR site:truecaller.com OR site:whocalledme.com OR site:wieheeftgebeld.nl OR site:telefoonboek.nl OR site:openingstijden.nl) {escaped_username}"
+        }
+
+        results = {}
+        for category, query in dorks.items():
+            results[category] = self._duckduckgo_search(query)
+        return results
