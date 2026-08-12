@@ -10,6 +10,8 @@ import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import customtkinter as ctk
+import re
+import webbrowser
 
 from sherlock_project.sherlock import sherlock, SitesInformation
 from sherlock_project.notify import QueryNotify
@@ -82,6 +84,129 @@ class SherlockGUI(ctk.CTk):
         # Build GUI layout
         self.create_widgets()
 
+    def _on_link_click(self, event):
+        """
+        Handles click on the link in results textbox.
+        """
+        try:
+            widget = event.widget
+            index = widget.index(f"@{event.x},{event.y}")
+            ranges = widget.tag_ranges("link")
+            for i in range(0, len(ranges), 2):
+                start = ranges[i]
+                end = ranges[i+1]
+                if widget.compare(start, "<=", index) and widget.compare(index, "<=", end):
+                    url = widget.get(start, end).strip()
+                    webbrowser.open(url)
+                    break
+        except Exception as e:
+            print(f"Error opening link: {e}")
+
+    def _insert_text(self, textbox, text):
+        """
+        Inserts text into the given textbox. Parses any URLs present, strips trailing punctuation, and tags them as 'link'.
+        """
+        textbox.configure(state="normal")
+
+        # Regex to match URLs (HTTP/HTTPS)
+        url_pattern = re.compile(r'(https?://[^\s\)]+)')
+
+        parts = []
+        last_idx = 0
+        for match in url_pattern.finditer(text):
+            start, end = match.span()
+            matched_url = text[start:end]
+
+            # Strip trailing punctuation if any
+            stripped_url = matched_url.rstrip(".,?!;:)")
+            stripped_len = len(stripped_url)
+            extra_len = len(matched_url) - stripped_len
+
+            # Text before url
+            if start > last_idx:
+                parts.append((text[last_idx:start], False))
+
+            # Link part
+            parts.append((stripped_url, True))
+
+            # Trailing extra characters part (not link)
+            if extra_len > 0:
+                parts.append((matched_url[stripped_len:], False))
+
+            last_idx = end
+
+        if last_idx < len(text):
+            parts.append((text[last_idx:], False))
+
+        for part_text, is_link in parts:
+            if is_link:
+                start_index = textbox.index("insert")
+                textbox.insert("insert", part_text)
+                end_index = textbox.index("insert")
+                textbox.tag_add("link", start_index, end_index)
+            else:
+                textbox.insert("insert", part_text)
+
+        textbox.see("insert")
+        textbox.configure(state="disabled")
+
+    def _setup_textbox_tags(self, textbox):
+        textbox.tag_config("link", foreground="#3182CE", underline=True)
+        textbox.tag_bind("link", "<Button-1>", self._on_link_click)
+        textbox.tag_bind("link", "<Enter>", lambda e: textbox.configure(cursor="hand2"))
+        textbox.tag_bind("link", "<Leave>", lambda e: textbox.configure(cursor="xterm"))
+
+    def _clear_textbox(self, textbox):
+        textbox.configure(state="normal")
+        textbox.delete("1.0", tk.END)
+        textbox.configure(state="disabled")
+
+    def _update_username_results_display(self):
+        """
+        Refreshes the username search results textbox, optionally filtering by query.
+        """
+        self._clear_textbox(self.text_username_results)
+
+        # Initial status
+        if self.current_username:
+            self._insert_text(self.text_username_results, f"[*] Sherlock zoekopdracht resultaten voor '{self.current_username}':\n\n")
+
+        filter_query = ""
+        if hasattr(self, "entry_filter_username"):
+            filter_query = self.entry_filter_username.get().strip().lower()
+
+        claimed_count = 0
+        display_count = 0
+
+        for site, info in self.search_results.items():
+            status_obj = info.get("status")
+            status_str = ""
+            if hasattr(status_obj, "status"):
+                status_str = str(status_obj.status)
+            else:
+                status_str = str(status_obj)
+
+            is_claimed = "claimed" in status_str.lower() or "exists" in status_str.lower() or "gevonden" in status_str.lower()
+            if is_claimed:
+                claimed_count += 1
+
+            # Filter condition
+            url_val = info.get("url_user") or ""
+            if filter_query and (filter_query not in site.lower() and filter_query not in url_val.lower()):
+                continue
+
+            if is_claimed:
+                self._insert_text(self.text_username_results, f"[+] {site}: {url_val}\n")
+                display_count += 1
+            elif self.all_sites_var.get():
+                self._insert_text(self.text_username_results, f"[-] {site}: {status_str}\n")
+                display_count += 1
+
+        # Total line
+        filter_suffix = f" (gefilterd, {display_count} getoond)" if filter_query else ""
+        if not self.searching:
+            self._insert_text(self.text_username_results, f"\n[*] Klaar! Totaal {claimed_count} accounts gedetecteerd{filter_suffix}.")
+
     def create_widgets(self):
         # Grid layout configuration
         self.grid_rowconfigure(0, weight=1)
@@ -152,13 +277,13 @@ class SherlockGUI(ctk.CTk):
         self.chk_nsfw.grid(row=0, column=0, padx=10, pady=10, sticky="w")
 
         self.all_sites_var = tk.BooleanVar(value=False)
-        self.chk_all_sites = ctk.CTkCheckBox(options_frame, text="Toon ook niet-gevonden sites", variable=self.all_sites_var)
+        self.chk_all_sites = ctk.CTkCheckBox(options_frame, text="Toon ook niet-gevonden sites", variable=self.all_sites_var, command=self._update_username_results_display)
         self.chk_all_sites.grid(row=1, column=0, padx=10, pady=10, sticky="w")
 
         # Table & Output Area
         output_frame = ctk.CTkFrame(self.tab_username)
         output_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", pady=10)
-        output_frame.grid_rowconfigure(1, weight=1)
+        output_frame.grid_rowconfigure(2, weight=1)
         output_frame.grid_columnconfigure(0, weight=1)
 
         # Status & Progress indicators
@@ -169,10 +294,23 @@ class SherlockGUI(ctk.CTk):
         self.progress_bar.grid(row=0, column=1, sticky="e", padx=15, pady=5)
         self.progress_bar.set(0)
 
+        # Filter Panel inside output_frame
+        filter_frame = ctk.CTkFrame(output_frame, fg_color="transparent")
+        filter_frame.grid(row=1, column=0, columnspan=2, sticky="ew", padx=15, pady=5)
+        filter_frame.grid_columnconfigure(1, weight=1)
+
+        filter_lbl = ctk.CTkLabel(filter_frame, text="Snel Filter:", font=ctk.CTkFont(size=12, weight="bold"))
+        filter_lbl.grid(row=0, column=0, padx=(0, 10), pady=2, sticky="w")
+
+        self.entry_filter_username = ctk.CTkEntry(filter_frame, placeholder_text="Type om te filteren op platform of URL...")
+        self.entry_filter_username.grid(row=0, column=1, sticky="ew", pady=2)
+        self.entry_filter_username.bind("<KeyRelease>", lambda e: self._update_username_results_display())
+
         # Scrollable textbox acting as beautiful table list
         self.text_username_results = ctk.CTkTextbox(output_frame, font=ctk.CTkFont(family="Courier", size=13))
-        self.text_username_results.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=15, pady=10)
+        self.text_username_results.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=15, pady=10)
         self.text_username_results.configure(state="disabled")
+        self._setup_textbox_tags(self.text_username_results)
 
         # Export frame
         export_frame = ctk.CTkFrame(self.tab_username)
@@ -220,7 +358,7 @@ class SherlockGUI(ctk.CTk):
 
         # Left Metadata Panel
         meta_panel = ctk.CTkFrame(results_splitter)
-        meta_panel.grid(row=0, column=0, sticky="nsew", padx=5, py=5)
+        meta_panel.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
         meta_panel.grid_rowconfigure(1, weight=1)
         meta_panel.grid_columnconfigure(0, weight=1)
 
@@ -230,10 +368,11 @@ class SherlockGUI(ctk.CTk):
         self.text_phone_meta = ctk.CTkTextbox(meta_panel, font=ctk.CTkFont(size=13))
         self.text_phone_meta.grid(row=1, column=0, sticky="nsew", padx=15, pady=10)
         self.text_phone_meta.configure(state="disabled")
+        self._setup_textbox_tags(self.text_phone_meta)
 
         # Right Web Mentions Panel
         mentions_panel = ctk.CTkFrame(results_splitter)
-        mentions_panel.grid(row=0, column=1, sticky="nsew", padx=5, py=5)
+        mentions_panel.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
         mentions_panel.grid_rowconfigure(1, weight=1)
         mentions_panel.grid_columnconfigure(0, weight=1)
 
@@ -243,13 +382,14 @@ class SherlockGUI(ctk.CTk):
         self.text_phone_mentions = ctk.CTkTextbox(mentions_panel, font=ctk.CTkFont(size=13))
         self.text_phone_mentions.grid(row=1, column=0, sticky="nsew", padx=15, pady=10)
         self.text_phone_mentions.configure(state="disabled")
+        self._setup_textbox_tags(self.text_phone_mentions)
 
         # Export row for phone searches
         export_frame = ctk.CTkFrame(self.tab_phone)
         export_frame.grid(row=3, column=0, sticky="ew", pady=10)
 
         export_lbl = ctk.CTkLabel(export_frame, text="Rapport Exporteren:", font=ctk.CTkFont(size=13, weight="bold"))
-        export_lbl.grid(row=0, column=0, px=15, py=10)
+        export_lbl.grid(row=0, column=0, padx=15, pady=10)
 
         self.btn_export_phone_txt = ctk.CTkButton(export_frame, text="TXT Rapport", width=120, command=lambda: self.export_results("txt", is_phone=True))
         self.btn_export_phone_txt.grid(row=0, column=1, padx=10, pady=10)
@@ -294,10 +434,8 @@ class SherlockGUI(ctk.CTk):
         self.progress_bar.configure(mode="indeterminate")
         self.progress_bar.start()
 
-        self.text_username_results.configure(state="normal")
-        self.text_username_results.delete("1.0", tk.END)
-        self.text_username_results.insert(tk.END, f"[*] Initialiseren van Sherlock zoekopdracht voor '{username}'...\n\n")
-        self.text_username_results.configure(state="disabled")
+        self._clear_textbox(self.text_username_results)
+        self._insert_text(self.text_username_results, f"[*] Initialiseren van Sherlock zoekopdracht voor '{username}'...\n\n")
 
         # Run search in background thread to keep UI responsive
         self.search_thread = threading.Thread(target=self._run_username_search, args=(username,), daemon=True)
@@ -332,18 +470,25 @@ class SherlockGUI(ctk.CTk):
             self._on_search_finished()
 
     def _on_search_result_found(self, site, url, status):
-        # Insert result to the text box beautifully in real-time
-        self.text_username_results.configure(state="normal")
+        # Insert result to the text box beautifully in real-time by updating self.search_results and refreshing display
+        status_map = {
+            "Gevonden": QueryStatus.CLAIMED,
+            "Niet Gevonden": QueryStatus.AVAILABLE,
+            "Ongeldige Gebruikersnaam": QueryStatus.ILLEGAL,
+            "Geblokkeerd (WAF/Cloudflare)": QueryStatus.WAF
+        }
+        mapped_status = status_map.get(status, QueryStatus.UNKNOWN)
 
-        # Color coding status
-        status_tag = f" [{status}]"
-        if status == "Gevonden":
-            self.text_username_results.insert(tk.END, f"[+] {site}: {url}\n")
-        elif self.all_sites_var.get():
-            self.text_username_results.insert(tk.END, f"[-] {site}: {status}\n")
-
-        self.text_username_results.see(tk.END)
-        self.text_username_results.configure(state="disabled")
+        self.search_results[site] = {
+            "url_user": url,
+            "status": QueryResult(
+                username=self.current_username,
+                site_name=site,
+                site_url_user=url,
+                status=mapped_status
+            )
+        }
+        self._update_username_results_display()
 
     def _update_search_status(self, msg):
         self.status_lbl.configure(text=msg)
@@ -355,22 +500,12 @@ class SherlockGUI(ctk.CTk):
         self.progress_bar.set(1.0)
         self._update_search_status("Zoekopdracht voltooid!")
 
-        claimed_count = 0
-        for info in self.search_results.values():
-            status_obj = info.get("status")
-            status_str = ""
-            if hasattr(status_obj, "status"):
-                status_str = str(status_obj.status)
-            else:
-                status_str = str(status_obj)
+        self._update_username_results_display()
 
-            if "claimed" in status_str.lower() or "exists" in status_str.lower():
-                claimed_count += 1
-
-        self.text_username_results.configure(state="normal")
-        self.text_username_results.insert(tk.END, f"\n[*] Klaar! Totaal {claimed_count} accounts gedetecteerd.")
-        self.text_username_results.see(tk.END)
-        self.text_username_results.configure(state="disabled")
+        claimed_count = sum(
+            1 for info in self.search_results.values()
+            if "claimed" in str(getattr(info.get("status"), "status", info.get("status"))).lower() or "gevonden" in str(getattr(info.get("status"), "status", info.get("status"))).lower()
+        )
 
         # Notify visually via popup
         self.after(100, lambda: messagebox.showinfo("Succes", f"Zoekopdracht voltooid!\nTotaal {claimed_count} accounts gevonden."))
@@ -383,15 +518,11 @@ class SherlockGUI(ctk.CTk):
             return
 
         self.current_phone = phone_input
-        self.text_phone_meta.configure(state="normal")
-        self.text_phone_meta.delete("1.0", tk.END)
-        self.text_phone_meta.insert(tk.END, "[*] Analyseren van telefoonnummer...\n")
-        self.text_phone_meta.configure(state="disabled")
+        self._clear_textbox(self.text_phone_meta)
+        self._insert_text(self.text_phone_meta, "[*] Analyseren van telefoonnummer...\n")
 
-        self.text_phone_mentions.configure(state="normal")
-        self.text_phone_mentions.delete("1.0", tk.END)
-        self.text_phone_mentions.insert(tk.END, "[*] Zoeken op openbare webpagina's en directories...\n")
-        self.text_phone_mentions.configure(state="disabled")
+        self._clear_textbox(self.text_phone_mentions)
+        self._insert_text(self.text_phone_mentions, "[*] Zoeken op openbare webpagina's en directories...\n")
 
         # Run phone OSINT in separate thread
         threading.Thread(target=self._run_phone_search, args=(phone_input,), daemon=True).start()
@@ -402,57 +533,50 @@ class SherlockGUI(ctk.CTk):
         self.phone_meta = meta
 
         # Real-time display of metadata
-        self.text_phone_meta.configure(state="normal")
-        self.text_phone_meta.delete("1.0", tk.END)
+        self._clear_textbox(self.text_phone_meta)
         if meta.get("valid"):
-            self.text_phone_meta.insert(tk.END, "✓ GELDIG TELEFOONNUMMER\n\n")
-            self.text_phone_meta.insert(tk.END, f"E.164 indeling:   {meta['e164']}\n")
-            self.text_phone_meta.insert(tk.END, f"Internationaal:   {meta['international']}\n")
-            self.text_phone_meta.insert(tk.END, f"Nationaal:        {meta['national']}\n")
-            self.text_phone_meta.insert(tk.END, f"Type Lijn:        {meta['type']}\n")
-            self.text_phone_meta.insert(tk.END, f"Provider:         {meta['carrier']}\n")
-            self.text_phone_meta.insert(tk.END, f"Geregistreerd in: {meta['location']}\n")
-            self.text_phone_meta.insert(tk.END, f"Tijdzones:        {', '.join(meta['timezones'])}\n")
+            self._insert_text(self.text_phone_meta, "✓ GELDIG TELEFOONNUMMER\n\n")
+            self._insert_text(self.text_phone_meta, f"E.164 indeling:   {meta['e164']}\n")
+            self._insert_text(self.text_phone_meta, f"Internationaal:   {meta['international']}\n")
+            self._insert_text(self.text_phone_meta, f"Nationaal:        {meta['national']}\n")
+            self._insert_text(self.text_phone_meta, f"Type Lijn:        {meta['type']}\n")
+            self._insert_text(self.text_phone_meta, f"Provider:         {meta['carrier']}\n")
+            self._insert_text(self.text_phone_meta, f"Geregistreerd in: {meta['location']}\n")
+            self._insert_text(self.text_phone_meta, f"Tijdzones:        {', '.join(meta['timezones'])}\n")
         else:
-            self.text_phone_meta.insert(tk.END, "✗ ONGEDLIG NUMMER OF FOUTFOLDING\n\n")
-            self.text_phone_meta.insert(tk.END, f"Invoer: {phone_str}\n")
-            self.text_phone_meta.insert(tk.END, f"Error details: {meta.get('error') or 'Onbekende fout'}\n")
-        self.text_phone_meta.configure(state="disabled")
+            self._insert_text(self.text_phone_meta, "✗ ONGEDLIG NUMMER OF FOUTFOLDING\n\n")
+            self._insert_text(self.text_phone_meta, f"Invoer: {phone_str}\n")
+            self._insert_text(self.text_phone_meta, f"Error details: {meta.get('error') or 'Onbekende fout'}\n")
 
         # If invalid, abort internet mentions search
         if not meta.get("valid"):
-            self.text_phone_mentions.configure(state="normal")
-            self.text_phone_mentions.delete("1.0", tk.END)
-            self.text_phone_mentions.insert(tk.END, "Zoeken afgebroken vanwege ongeldig nummer format.")
-            self.text_phone_mentions.configure(state="disabled")
+            self._clear_textbox(self.text_phone_mentions)
+            self._insert_text(self.text_phone_mentions, "Zoeken afgebroken vanwege ongeldig nummer format.")
             return
 
         # Perform mentions/links dorking
         mentions = p.search_phone_mentions(meta)
         self.phone_results = mentions
 
-        self.text_phone_mentions.configure(state="normal")
-        self.text_phone_mentions.delete("1.0", tk.END)
+        self._clear_textbox(self.text_phone_mentions)
 
         # Output General Web Mentions
-        self.text_phone_mentions.insert(tk.END, "[ WEB MENTIONS & DIRECTORIES ]\n")
+        self._insert_text(self.text_phone_mentions, "[ WEB MENTIONS & DIRECTORIES ]\n")
         web_items = mentions.get("General Web Mentions", [])
         if not web_items:
-            self.text_phone_mentions.insert(tk.END, " Geen openbare vermeldingen gevonden op algemene websites.\n\n")
+            self._insert_text(self.text_phone_mentions, " Geen openbare vermeldingen gevonden op algemene websites.\n\n")
         else:
             for item in web_items:
-                self.text_phone_mentions.insert(tk.END, f"• {item['title']}\n  Link: {item['url']}\n\n")
+                self._insert_text(self.text_phone_mentions, f"• {item['title']}\n  Link: {item['url']}\n\n")
 
         # Output Social Media Matches
-        self.text_phone_mentions.insert(tk.END, "[ SOCIAL MEDIA ASSOCIATIONS ]\n")
+        self._insert_text(self.text_phone_mentions, "[ SOCIAL MEDIA ASSOCIATIONS ]\n")
         social_items = mentions.get("Social Media Matches", [])
         if not social_items:
-            self.text_phone_mentions.insert(tk.END, " Geen directe social media matches gevonden.\n\n")
+            self._insert_text(self.text_phone_mentions, " Geen directe social media matches gevonden.\n\n")
         else:
             for item in social_items:
-                self.text_phone_mentions.insert(tk.END, f"• {item['title']}\n  Link: {item['url']}\n\n")
-
-        self.text_phone_mentions.configure(state="disabled")
+                self._insert_text(self.text_phone_mentions, f"• {item['title']}\n  Link: {item['url']}\n\n")
         self.after(100, lambda: messagebox.showinfo("Succes", "Telefoon OSINT & tracker dorking voltooid!"))
 
     # Export Report Routing

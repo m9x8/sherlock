@@ -42,6 +42,26 @@ Community-maintained packages are available for Debian (>= 13), Ubuntu (>= 22.10
 
 See all alternative installation methods [here](https://sherlockproject.xyz/installation).
 
+## Graphical User Interface (GUI) & Phone OSINT
+
+Sherlock now includes a fully-featured, modern CustomTkinter Graphical User Interface and a Phone Number OSINT & Tracking Suite!
+
+### Launching the GUI
+
+To launch the professional GUI, simply run sherlock without any arguments, or pass the `--gui` flag:
+```bash
+sherlock --gui
+```
+On Windows, you can also use `run_gui.bat` or use the automated setup utility `setup_and_run_windows.bat` to create a virtual environment, install dependencies, and generate a convenient desktop shortcut.
+
+### Features
+- **Gebruikersnaam Zoeken**: Hunt down social media accounts in real-time with an interactive, scrollable list of results. Clickable, blue-underlined hyperlinks automatically open in your default browser.
+- **Telefoonnummer OSINT**: Validate, clean, and format international and national phone numbers using the `phonenumbers` library. Perform stealth web dorking via DuckDuckGo without JavaScript to retrieve general web mentions, directories, and social media associations.
+- **Live Filtering**: Filter through found social media accounts or mentions instantly using a dedicated live search filter box.
+- **Multi-format Reporting**: Export beautifully structured scanning reports in TXT, Microsoft Word (`.docx`), or styled PDF formats. Reports include rich scan metadata such as date, duration, match counts, and clean structured layout blocks.
+
+---
+
 ## General usage
 
 To search for only one user:
