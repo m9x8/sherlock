@@ -57,7 +57,7 @@ phonenumbers = "^9.0.36"
 python-docx = "^1.2.0"
 customtkinter = "^6.0.0"
 reportlab = "^4.0.0"
-duckduckgo-search = ">=6.0.0"
+ddgs = ">=9.0.0"
 curl-cffi = "^0.16.0"
 mmh3 = "^5.2.1"
 dnspython = "^2.8.0"
@@ -70,6 +70,7 @@ shodan = "^1.31.0"
 cryptography = "^50.0.0"
 geopy = "^2.5.0"
 maigret = {git = "https://github.com/m9x8/maigreta.git"}
+damru = {git = "https://github.com/akwin1234/damru.git"}
 
 [tool.poetry.group.dev.dependencies]
 jsonschema = "^4.0.0"

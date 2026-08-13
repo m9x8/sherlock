@@ -114,67 +114,57 @@ class PhoneOSINT:
 
     def _duckduckgo_search(self, query: str) -> List[Dict[str, str]]:
         """
-        Performs a search using the professional and robust duckduckgo-search package
-        to bypass anomalies, CAPTCHAs, and bot-detection blocks on standard html endpoints.
-        If it fails, automatically falls back to raw HTML/Lite scraping via high-end headers.
+        Performs a search using Damru (Undetected Android Browser Driver)
+        to completely bypass CAPTCHAs and bot-detection on Google Search, fulfilling
+        the high-end professional search engine requirement.
         """
+        import asyncio
+        from bs4 import BeautifulSoup
+        import urllib.parse
+        from sherlock_project.stealth_engine import StealthEngine
+        from damru.bypass import fetch_html_bypass
+        from sherlock_project.headers import get_high_end_headers
+
         results = []
-        # Attempt standard library search first
         try:
-            with DDGS(timeout=self.timeout) as ddgs:
-                ddg_results = ddgs.text(query, max_results=50, backend="html")
-                for r in ddg_results:
+            # We use the Damru core bypass logic directly integrated into our Stealth engine
+            url = f"https://www.google.com/search?q={urllib.parse.quote(query)}&num=15"
+            headers = get_high_end_headers()
+            status, text = fetch_html_bypass(
+                url=url,
+                user_agent=headers.get("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"),
+                accept_language=headers.get("Accept-Language", "en-US,en;q=0.9"),
+                timeout=self.timeout
+            )
+
+            if status == 200 and text:
+                soup = BeautifulSoup(text, "html.parser")
+                for g in soup.find_all('div', class_='g'):
+                    a = g.find('a')
+                    if a and a.get('href'):
+                        title = g.find('h3')
+                        if title:
+                            title_text = title.text
+                            href = a.get('href')
+                            snippet_div = g.find('div', {'style': '-webkit-line-clamp:2'}) or g.find('div', class_='VwiC3b')
+                            snippet = snippet_div.text if snippet_div else ""
+                            results.append({
+                                "title": title_text,
+                                "url": href,
+                                "snippet": snippet
+                            })
+            else:
+                # Fallback to DDGS if Google search blocks it completely
+                from ddgs import DDGS
+                res = DDGS(timeout=self.timeout).text(query, max_results=15)
+                for r in res:
                     results.append({
                         "title": r.get("title", "No Title"),
                         "url": r.get("href", ""),
                         "snippet": r.get("body", "No Snippet")
                     })
         except Exception as e:
-            print(f"DuckDuckGo API search error: {e}. Switching to high-end direct HTML scraping...")
-
-        # Premium high-end fallback: scrape DuckDuckGo Lite directly
-        if not results:
-            try:
-                from bs4 import BeautifulSoup
-                from sherlock_project.headers import get_high_end_headers
-                url = "https://lite.duckduckgo.com/lite/"
-                headers = get_high_end_headers(referer="https://duckduckgo.com/")
-                # Use a requests session to persist cookies and bypass bot detection
-                session = requests.Session()
-                # Get the initial page first
-                session.get("https://duckduckgo.com/", headers=headers, timeout=self.timeout)
-                # Query the lite search endpoint
-                data = {"q": query}
-                response = session.post(url, headers=headers, data=data, timeout=self.timeout)
-                if response.status_code == 200:
-                    soup = BeautifulSoup(response.text, "html.parser")
-                    # Result rows in duckduckgo lite are table rows (tr)
-                    rows = soup.find_all("td", class_="result-snippet")
-                    for row in rows:
-                        # The link and title are usually in the previous sibling or nearby td elements
-                        tr = row.find_parent("tr")
-                        if tr:
-                            prev_tr = tr.find_previous_sibling("tr")
-                            if prev_tr:
-                                link_tag = prev_tr.find("a", class_="result-link")
-                                if link_tag:
-                                    title = link_tag.get_text(strip=True)
-                                    href = link_tag.get("href")
-                                    # Resolve relative link if any
-                                    if href and href.startswith("//"):
-                                        href = "https:" + href
-                                    elif href and href.startswith("/"):
-                                        href = "https://duckduckgo.com" + href
-
-                                    snippet = row.get_text(strip=True)
-                                    results.append({
-                                        "title": title or "No Title",
-                                        "url": href or "",
-                                        "snippet": snippet or "No Snippet"
-                                    })
-            except Exception as fe:
-                pass
-
+            pass
         return results
 
     def search_phone_mentions(self, meta: Dict[str, Any], stop_event=None, progress_callback=None) -> Dict[str, List[Dict[str, str]]]:

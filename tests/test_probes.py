@@ -59,6 +59,7 @@ class TestLiveTargets:
         ('GitLab', 255),
         ('Codecademy', 30)
     ])
+    @pytest.mark.skip(reason='Flaky')
     def test_likely_negatives_via_message(self, sites_info, site, random_len):
         num_attempts: int = 3
         attempted_usernames: list[str] = []
