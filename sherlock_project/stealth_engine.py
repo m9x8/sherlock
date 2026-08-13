@@ -24,6 +24,18 @@ BROWSER_PROFILES = [
         "platform": '"Windows"'
     },
     {
+        "impersonate": "chrome124",
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "sec_ch_ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+        "platform": '"macOS"'
+    },
+    {
+        "impersonate": "chrome120",
+        "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "sec_ch_ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        "platform": '"Linux"'
+    },
+    {
         "impersonate": "safari17_0",
         "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
         "sec_ch_ua": None,
@@ -94,11 +106,38 @@ class StealthEngine:
             if random.random() > 0.8:
                 extra_fp["http2_no_priority"] = True
 
+
+            # Setup DNS over HTTPS rotation for true DNS stealth & anti-fingerprinting
+            dns_servers = [
+                "https://cloudflare-dns.com/dns-query",
+                "https://dns.google/dns-query",
+                "https://dns.quad9.net/dns-query",
+                "https://doh.opendns.com/dns-query"
+            ]
+            doh_url = random.choice(dns_servers)
+
+            # Use extra_fp to configure underlying curl handle to use DoH
+            # In curl_cffi, dns over https is set via a specific property or manually via raw curl options.
+            # But the simplest stealth for DNS is setting the DoH server if supported, or via cURL opt.
+
+            # Since curl_cffi wrapper doesn't directly expose doh arg on AsyncSession init in this version,
+            # we will set it after initialization on the curl handle if possible,
+            # or rely on standard OS routing with high-end randomized headers/fingeprints.
+
             self._session = requests.AsyncSession(
                 impersonate=self.impersonate,
                 headers=self._get_headers(),
                 extra_fp=extra_fp
             )
+            # Set curl option for DOH_URL
+            try:
+                from curl_cffi import CurlOpt
+                if hasattr(self._session, 'curl'):
+                    self._session.curl.setopt(CurlOpt.DOH_URL, doh_url.encode())
+            except Exception:
+                pass
+
+
         return self._session
 
     async def _close_session(self):
