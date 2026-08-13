@@ -57,6 +57,7 @@ TRANSLATIONS = {
         "tab_network": "Netwerk & Domein OSINT",
         "tab_person": "Personen Zoeken",
         "tab_dox": "Dox Sectie",
+        "tab_maigret": "Diepe Gebruikersnaam (Maigret)",
         "tab_settings": "Instellingen",
         "theme": "Thema:",
         "username_header": "Hunt down Social Media Accounts",
@@ -164,6 +165,7 @@ TRANSLATIONS = {
         "tab_network": "Network & Domain OSINT",
         "tab_person": "Person Search",
         "tab_dox": "Dox Section",
+        "tab_maigret": "Deep Username (Maigret)",
         "tab_settings": "Settings",
         "theme": "Theme:",
         "username_header": "Hunt down Social Media Accounts",
@@ -401,6 +403,7 @@ class SherlockGUI(ctk.CTk):
         self.btn_network_tab.configure(text=self.get_text("tab_network"))
         self.btn_person_tab.configure(text=self.get_text("tab_person"))
         self.btn_dox_tab.configure(text=self.get_text("tab_dox"))
+        self.btn_maigret_tab.configure(text=self.get_text("tab_maigret"))
         self.btn_settings_tab.configure(text=self.get_text("tab_settings"))
         self.theme_label.configure(text=self.get_text("theme"))
 
@@ -676,8 +679,11 @@ class SherlockGUI(ctk.CTk):
         self.btn_dox_tab = ctk.CTkButton(self.sidebar, text=self.get_text("tab_dox"), command=self.show_dox_tab)
         self.btn_dox_tab.grid(row=7, column=0, padx=20, pady=5)
 
+        self.btn_maigret_tab = ctk.CTkButton(self.sidebar, text=self.get_text("tab_maigret"), command=self.show_maigret_tab)
+        self.btn_maigret_tab.grid(row=8, column=0, padx=20, pady=5)
+
         self.btn_settings_tab = ctk.CTkButton(self.sidebar, text=self.get_text("tab_settings"), command=self.show_settings_tab)
-        self.btn_settings_tab.grid(row=8, column=0, padx=20, pady=5)
+        self.btn_settings_tab.grid(row=9, column=0, padx=20, pady=5)
 
         # Theme selection
         self.theme_label = ctk.CTkLabel(self.sidebar, text=self.get_text("theme"), font=ctk.CTkFont(size=12))
@@ -700,6 +706,7 @@ class SherlockGUI(ctk.CTk):
         self.create_person_tab()
         self.create_dox_tab()
         self.create_maigret_tab()
+        self.maigret_frame.grid_remove()
         self.create_settings_tab()
 
         # Show initial tab
@@ -1213,39 +1220,46 @@ class SherlockGUI(ctk.CTk):
     # Tab views switches
 
     def show_email_tab(self):
+        self.maigret_frame.grid_remove()
         self.tab_username.grid_remove()
         self.tab_phone.grid_remove()
         self.tab_company.grid_remove()
         self.tab_network.grid_remove()
         self.tab_person.grid_remove()
         self.tab_dox.grid_remove()
+        self.maigret_frame.grid_remove()
         self.tab_settings.grid_remove()
         self.tab_email.grid(row=0, column=0, sticky="nsew")
         self._set_active_button(self.btn_email_tab)
 
     def show_network_tab(self):
+        self.maigret_frame.grid_remove()
         self.tab_username.grid_remove()
         self.tab_phone.grid_remove()
         self.tab_company.grid_remove()
         self.tab_email.grid_remove()
         self.tab_person.grid_remove()
         self.tab_dox.grid_remove()
+        self.maigret_frame.grid_remove()
         self.tab_settings.grid_remove()
         self.tab_network.grid(row=0, column=0, sticky="nsew")
         self._set_active_button(self.btn_network_tab)
 
     def show_person_tab(self):
+        self.maigret_frame.grid_remove()
         self.tab_username.grid_remove()
         self.tab_phone.grid_remove()
         self.tab_company.grid_remove()
         self.tab_email.grid_remove()
         self.tab_network.grid_remove()
         self.tab_dox.grid_remove()
+        self.maigret_frame.grid_remove()
         self.tab_settings.grid_remove()
         self.tab_person.grid(row=0, column=0, sticky="nsew")
         self._set_active_button(self.btn_person_tab)
 
     def show_dox_tab(self):
+        self.maigret_frame.grid_remove()
         self.tab_username.grid_remove()
         self.tab_phone.grid_remove()
         self.tab_company.grid_remove()
@@ -1258,44 +1272,58 @@ class SherlockGUI(ctk.CTk):
 
 
     def show_maigret_tab(self):
-        self.hide_all_tabs()
-        self.maigret_btn.configure(fg_color=("gray75", "gray25"))
-        self.maigret_frame.grid(row=0, column=1, sticky="nsew")
-
-    def show_username_tab(self):
+        self.tab_username.grid_remove()
         self.tab_phone.grid_remove()
         self.tab_company.grid_remove()
         self.tab_email.grid_remove()
         self.tab_network.grid_remove()
         self.tab_person.grid_remove()
         self.tab_dox.grid_remove()
+        self.tab_settings.grid_remove()
+        self.maigret_frame.grid(row=0, column=0, sticky="nsew")
+        self._set_active_button(self.btn_maigret_tab)
+
+    def show_username_tab(self):
+        self.maigret_frame.grid_remove()
+        self.tab_phone.grid_remove()
+        self.tab_company.grid_remove()
+        self.tab_email.grid_remove()
+        self.tab_network.grid_remove()
+        self.tab_person.grid_remove()
+        self.tab_dox.grid_remove()
+        self.maigret_frame.grid_remove()
         self.tab_settings.grid_remove()
         self.tab_username.grid(row=0, column=0, sticky="nsew")
         self._set_active_button(self.btn_username_tab)
 
     def show_phone_tab(self):
+        self.maigret_frame.grid_remove()
         self.tab_username.grid_remove()
         self.tab_company.grid_remove()
         self.tab_email.grid_remove()
         self.tab_network.grid_remove()
         self.tab_person.grid_remove()
         self.tab_dox.grid_remove()
+        self.maigret_frame.grid_remove()
         self.tab_settings.grid_remove()
         self.tab_phone.grid(row=0, column=0, sticky="nsew")
         self._set_active_button(self.btn_phone_tab)
 
     def show_company_tab(self):
+        self.maigret_frame.grid_remove()
         self.tab_username.grid_remove()
         self.tab_phone.grid_remove()
         self.tab_email.grid_remove()
         self.tab_network.grid_remove()
         self.tab_person.grid_remove()
         self.tab_dox.grid_remove()
+        self.maigret_frame.grid_remove()
         self.tab_settings.grid_remove()
         self.tab_company.grid(row=0, column=0, sticky="nsew")
         self._set_active_button(self.btn_company_tab)
 
     def show_settings_tab(self):
+        self.maigret_frame.grid_remove()
         self.tab_username.grid_remove()
         self.tab_phone.grid_remove()
         self.tab_company.grid_remove()
@@ -1303,11 +1331,12 @@ class SherlockGUI(ctk.CTk):
         self.tab_network.grid_remove()
         self.tab_person.grid_remove()
         self.tab_dox.grid_remove()
+        self.maigret_frame.grid_remove()
         self.tab_settings.grid(row=0, column=0, sticky="nsew")
         self._set_active_button(self.btn_settings_tab)
 
     def _set_active_button(self, active_btn):
-        for btn in [self.btn_username_tab, self.btn_phone_tab, self.btn_company_tab, self.btn_email_tab, self.btn_network_tab, self.btn_person_tab, self.btn_dox_tab, self.btn_settings_tab]:
+        for btn in [self.btn_username_tab, self.btn_phone_tab, self.btn_company_tab, self.btn_email_tab, self.btn_network_tab, self.btn_person_tab, self.btn_dox_tab, self.btn_maigret_tab, self.btn_settings_tab]:
             if btn == active_btn:
                 btn.configure(fg_color="#1F538D")
             else:
