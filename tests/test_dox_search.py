@@ -4,7 +4,7 @@ from sherlock_project.dox_search import DoxProfiler
 
 def test_dox_profiler_search():
     dp = DoxProfiler()
-    dp.phone_osint._duckduckgo_search = MagicMock(return_value=[
+    dp.phone_osint._advanced_search = MagicMock(return_value=[
         {"title": "Target Dox Found", "url": "https://doxsite.com/target", "snippet": "A fake dox result"}
     ])
 

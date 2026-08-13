@@ -4,15 +4,14 @@ Provides direct scraping methods for phone numbers, companies, and people
 by requesting web pages directly with high-end randomized headers and extracting verified findings.
 """
 
-import requests
 import re
 from bs4 import BeautifulSoup
 from sherlock_project.headers import get_high_end_headers
+from damru.bypass import fetch_html_bypass
 
 class HighEndScraper:
     def __init__(self, timeout: int = 15):
         self.timeout = timeout
-        self.session = requests.Session()
 
     def scrape_phone_nl_registries(self, clean_number: str) -> list[dict[str, str]]:
         """
@@ -34,9 +33,14 @@ class HighEndScraper:
         try:
             url = f"https://www.wieheeftgebeld.nl/nummer/{search_num}"
             headers = get_high_end_headers(referer="https://www.wieheeftgebeld.nl/")
-            response = self.session.get(url, headers=headers, timeout=self.timeout)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, "html.parser")
+            status, text = fetch_html_bypass(
+                url=url,
+                user_agent=headers.get("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"),
+                accept_language=headers.get("Accept-Language", "nl-NL,nl;q=0.9,en-US;q=0.8,en;q=0.7"),
+                timeout=self.timeout
+            )
+            if status == 200 and text:
+                soup = BeautifulSoup(text, "html.parser")
                 comments_section = soup.find_all("div", class_="comment-text")
                 if comments_section:
                     for i, comment in enumerate(comments_section[:5], 1):
@@ -64,9 +68,14 @@ class HighEndScraper:
         try:
             url = f"https://www.tellows.nl/num/{search_num}"
             headers = get_high_end_headers(referer="https://www.tellows.nl/")
-            response = self.session.get(url, headers=headers, timeout=self.timeout)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, "html.parser")
+            status, text = fetch_html_bypass(
+                url=url,
+                user_agent=headers.get("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"),
+                accept_language=headers.get("Accept-Language", "nl-NL,nl;q=0.9,en-US;q=0.8,en;q=0.7"),
+                timeout=self.timeout
+            )
+            if status == 200 and text:
+                soup = BeautifulSoup(text, "html.parser")
                 # Look for tellows score or user comments
                 score = soup.find("div", class_="tellows-score")
                 score_str = score.get_text(strip=True) if score else "Onbekend"
@@ -105,9 +114,14 @@ class HighEndScraper:
             # Query OpenKVK search API or standard landing endpoint
             query_url = f"https://openkvk.nl/zoeken/{urllib.parse.quote(company_name)}"
             headers = get_high_end_headers(referer="https://openkvk.nl/")
-            response = self.session.get(query_url, headers=headers, timeout=self.timeout)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, "html.parser")
+            status, text = fetch_html_bypass(
+                url=query_url,
+                user_agent=headers.get("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"),
+                accept_language=headers.get("Accept-Language", "nl-NL,nl;q=0.9,en-US;q=0.8,en;q=0.7"),
+                timeout=self.timeout
+            )
+            if status == 200 and text:
+                soup = BeautifulSoup(text, "html.parser")
                 # Find search result links on openkvk.nl
                 links = soup.find_all("a", href=re.compile(r"/openkvk/"))
                 for link in links[:5]:

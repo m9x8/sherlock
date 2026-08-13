@@ -49,7 +49,7 @@ class PersonOSINT:
             if stop_event and stop_event.is_set():
                 break
 
-            results[category] = self.phone_osint._duckduckgo_search(query)
+            results[category] = self.phone_osint._advanced_search(query)
             current_step += 1
             if progress_callback:
                 progress_callback(current_step, total_steps)

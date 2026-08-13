@@ -183,11 +183,11 @@ class CompanyOSINT:
             for site_name, query in sites.items():
                 if stop_event and stop_event.is_set():
                     break
-                site_hits = self.phone_osint._duckduckgo_search(query)
+                site_hits = self.phone_osint._advanced_search(query)
                 # Fallback to loose search query if exact matches yield 0 results
                 if not site_hits:
                     loose_query = query.replace(escaped_name, company_name)
-                    site_hits = self.phone_osint._duckduckgo_search(loose_query)
+                    site_hits = self.phone_osint._advanced_search(loose_query)
 
                 for hit in site_hits:
                     hit["register"] = site_name
