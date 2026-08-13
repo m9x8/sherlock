@@ -1,27 +1,56 @@
-"""
-Sherlock Dox & Target Profiler Module
-Aggregates multiple OSINT data points (Username, Email, Phone, Person, Network)
-into a single consolidated profile / target dossier. Performs deep-dive dox searches.
-"""
+with open('sherlock_project/dox_search.py', 'r') as f:
+    content = f.read()
 
-import threading
-from typing import Dict, List, Any
-from sherlock_project.phone_search import PhoneOSINT
-from sherlock_project.person_search import PersonOSINT
-from sherlock_project.company_search import CompanyOSINT
+old_dox = """        results = {
+            "Gevonden Adressen & Kadaster": [],
+            "Relaties, Familie & Connecties": [],
+            "Gekoppelde Bedrijven & Directies": [],
+            "Lekken, Gegevensbreuken & Pastes": [],
+            "Social Media & Online Voetafdruk": []
+        }
 
-class DoxProfiler:
-    def __init__(self, timeout: int = 15):
-        self.timeout = timeout
-        self.phone_osint = PhoneOSINT(timeout=timeout)
-        self.person_osint = PersonOSINT(timeout=timeout)
-        self.company_osint = CompanyOSINT(timeout=timeout)
+        # Calculate steps: we have queries for each field if filled
+        queries_to_run = []
 
-    def search_dox_dossier(self, username: str = "", email: str = "", phone: str = "", name: str = "", city: str = "", stop_event=None, progress_callback=None) -> Dict[str, Any]:
-        """
-        Gathers comprehensive dossier information across username dorks, physical/leak listings, and associations.
-        """
-        results = {
+        # Build composite target details
+        target_indicators = []
+        if name:
+            target_indicators.append(f'"{name}"')
+        if city:
+            target_indicators.append(f'"{city}"')
+        if phone:
+            target_indicators.append(f'"{phone}"')
+        if email:
+            target_indicators.append(f'"{email}"')
+        if username:
+            target_indicators.append(f'"{username}"')
+
+        if not target_indicators:
+            return results
+
+        composite_or = " OR ".join(target_indicators)
+
+        # 1. Address, Physical Locations & Kadaster
+        q1 = f"(site:kadaster.nl OR site:overheid.nl OR site:infobel.com OR site:telefoonboek.nl OR site:drimble.nl OR site:openadres.nl) ({composite_or})"
+        queries_to_run.append(("Gevonden Adressen & Kadaster", q1))
+
+        # 2. Family, Relatives & Associations
+        q2 = f"(site:stamboomzoeker.nl OR site:genealogieonline.nl OR site:facebook.com OR site:linkedin.com/in OR site:familieberichten.nl) ({composite_or}) (\\"familie\\" OR \\"relatie\\" OR \\"gehuwd\\" OR \\"partner\\" OR \\"zoon\\" OR \\"dochter\\")"
+        queries_to_run.append(("Relaties, Familie & Connecties", q2))
+
+        # 3. Companies & Directorships
+        q3 = f"(site:kvk.nl OR site:opencorporates.com OR site:companyinfo.nl OR site:drimble.nl OR site:find-and-update.company-information.service.gov.uk) ({composite_or})"
+        queries_to_run.append(("Gekoppelde Bedrijven & Directies", q3))
+
+        # 4. Leaks & Databases
+        q4 = f"(site:pastebin.com OR site:paste.org OR site:gitter.im OR site:github.com OR site:gitlab.com OR site:dehashed.com OR site:leak-lookup.com) ({composite_or})"
+        queries_to_run.append(("Lekken, Gegevensbreuken & Pastes", q4))
+
+        # 5. Social Presence & Footprint
+        q5 = f"(site:instagram.com OR site:facebook.com OR site:twitter.com OR site:x.com OR site:pinterest.com OR site:tiktok.com OR site:youtube.com OR site:reddit.com/user) ({composite_or})"
+        queries_to_run.append(("Social Media & Online Voetafdruk", q5))"""
+
+new_dox = """        results = {
             "Gevonden Adressen & Kadaster": [],
             "Relaties, Familie & Connecties": [],
             "Gekoppelde Bedrijven & Directies": [],
@@ -60,7 +89,7 @@ class DoxProfiler:
         queries_to_run.append(("Gevonden Adressen & Kadaster", q1))
 
         # 2. Family, Relatives & Associations
-        q2 = f"(site:stamboomzoeker.nl OR site:genealogieonline.nl OR site:facebook.com OR site:linkedin.com/in OR site:familieberichten.nl) ({composite_or}) (\"familie\" OR \"relatie\" OR \"gehuwd\" OR \"partner\" OR \"zoon\" OR \"dochter\")"
+        q2 = f"(site:stamboomzoeker.nl OR site:genealogieonline.nl OR site:facebook.com OR site:linkedin.com/in OR site:familieberichten.nl) ({composite_or}) (\\"familie\\" OR \\"relatie\\" OR \\"gehuwd\\" OR \\"partner\\" OR \\"zoon\\" OR \\"dochter\\")"
         queries_to_run.append(("Relaties, Familie & Connecties", q2))
 
         # 3. Companies & Directorships
@@ -93,18 +122,9 @@ class DoxProfiler:
 
         # 10. Documents & Hidden Files
         q10 = f"(filetype:pdf OR filetype:xls OR filetype:xlsx OR filetype:doc OR filetype:docx OR filetype:txt OR filetype:csv) ({composite_or}) (vertrouwelijk OR confidential OR dossier OR rapport OR geheim)"
-        queries_to_run.append(("Documenten & Verborgen Bestanden", q10))
+        queries_to_run.append(("Documenten & Verborgen Bestanden", q10))"""
 
-        total_queries = len(queries_to_run)
-        current_query = 0
+content = content.replace(old_dox, new_dox)
 
-        for category, query_str in queries_to_run:
-            if stop_event and stop_event.is_set():
-                break
-            hits = self.phone_osint._duckduckgo_search(query_str)
-            results[category] = hits
-            current_query += 1
-            if progress_callback:
-                progress_callback(current_query, total_queries)
-
-        return results
+with open('sherlock_project/dox_search.py', 'w') as f:
+    f.write(content)
