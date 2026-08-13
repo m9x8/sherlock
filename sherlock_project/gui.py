@@ -19,6 +19,7 @@ import random
 
 # Core Sherlock imports
 from sherlock_project.ui_orchestrator import UIOrchestrator
+from sherlock_project.maigret_engine import MaigretEngine
 from sherlock_project.socmint_deep import SocmintDeepEngine
 from sherlock_project.company_deep import CompanyDeepEngine
 from sherlock_project.phone_recon import PhoneReconEngine
@@ -42,7 +43,7 @@ import shodan
 # Setup CustomTkinter Theme and Colors
 ctk.set_appearance_mode("Dark")
 # Load a custom modern, sophisticated dark/cyberpunk color theme with deep blues & clean grays
-ctk.set_default_color_theme("blue")
+ctk.set_default_color_theme("dark-blue")
 
 SETTINGS_FILE = os.path.expanduser("~/.sherlock_settings.json")
 
@@ -698,6 +699,7 @@ class SherlockGUI(ctk.CTk):
         self.create_network_tab()
         self.create_person_tab()
         self.create_dox_tab()
+        self.create_maigret_tab()
         self.create_settings_tab()
 
         # Show initial tab
@@ -1253,6 +1255,12 @@ class SherlockGUI(ctk.CTk):
         self.tab_settings.grid_remove()
         self.tab_dox.grid(row=0, column=0, sticky="nsew")
         self._set_active_button(self.btn_dox_tab)
+
+
+    def show_maigret_tab(self):
+        self.hide_all_tabs()
+        self.maigret_btn.configure(fg_color=("gray75", "gray25"))
+        self.maigret_frame.grid(row=0, column=1, sticky="nsew")
 
     def show_username_tab(self):
         self.tab_phone.grid_remove()
@@ -2179,6 +2187,119 @@ class SherlockGUI(ctk.CTk):
             print(f"Error restarting: {e}")
             sys.exit(0)
 
+
+    def create_maigret_tab(self):
+        self.maigret_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.maigret_frame.grid_columnconfigure(0, weight=1)
+        self.maigret_frame.grid_rowconfigure(2, weight=1)
+
+        # Header
+        header = ctk.CTkLabel(self.maigret_frame, text="Deep Username Search (Maigret)", font=ctk.CTkFont(size=24, weight="bold"))
+        header.grid(row=0, column=0, padx=20, pady=(20, 10), sticky="w")
+
+        # Input Section
+        input_frame = ctk.CTkFrame(self.maigret_frame)
+        input_frame.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
+        input_frame.grid_columnconfigure(0, weight=1)
+
+        self.maigret_target_entry = ctk.CTkEntry(input_frame, placeholder_text="Enter username...")
+        self.maigret_target_entry.grid(row=0, column=0, padx=(10, 5), pady=10, sticky="ew")
+
+        self.maigret_sites_entry = ctk.CTkEntry(input_frame, placeholder_text="Top N sites (default 100)", width=150)
+        self.maigret_sites_entry.grid(row=0, column=1, padx=5, pady=10, sticky="w")
+
+        self.maigret_proxy_entry = ctk.CTkEntry(input_frame, placeholder_text="Proxy (optional)", width=200)
+        self.maigret_proxy_entry.grid(row=0, column=2, padx=5, pady=10, sticky="w")
+
+        self.maigret_search_btn = ctk.CTkButton(input_frame, text="Deep Search", command=self.start_maigret_search)
+        self.maigret_search_btn.grid(row=0, column=3, padx=(5, 10), pady=10)
+
+        # Results Textbox
+        self.maigret_result_box = ctk.CTkTextbox(self.maigret_frame, wrap="word", font=ctk.CTkFont(family="Consolas", size=12))
+        self.maigret_result_box.grid(row=2, column=0, padx=20, pady=10, sticky="nsew")
+
+        self.maigret_result_box._textbox.tag_config("found", foreground="light green")
+        self.maigret_result_box._textbox.tag_config("header", foreground="cyan", font=("Consolas", 12, "bold"))
+        self.maigret_result_box._textbox.tag_config("error", foreground="red")
+
+        # Progress Bar
+        self.maigret_progress = ctk.CTkProgressBar(self.maigret_frame)
+        self.maigret_progress.grid(row=3, column=0, padx=20, pady=(0, 20), sticky="ew")
+        self.maigret_progress.set(0)
+
+        self.maigret_is_running = False
+
+    def start_maigret_search(self):
+        if self.maigret_is_running:
+            return
+
+        username = self.maigret_target_entry.get().strip()
+        if not username:
+            self.maigret_result_box.insert("end", "[!] Please enter a username.\n", "error")
+            return
+
+        proxy = self.maigret_proxy_entry.get().strip() or None
+        top_sites_str = self.maigret_sites_entry.get().strip()
+        top_sites = 100
+        if top_sites_str.isdigit():
+            top_sites = int(top_sites_str)
+
+        self.maigret_is_running = True
+        self.maigret_search_btn.configure(state="disabled", text="Searching...")
+        self.maigret_progress.set(0)
+        self.maigret_progress.start()
+
+        self.maigret_result_box.delete("1.0", "end")
+        self.maigret_result_box.insert("end", f"[*] Starting Deep Username Search for '{username}' (Top {top_sites} sites)...\n", "header")
+
+        # Run in thread
+        import threading
+        import asyncio
+        threading.Thread(target=self._run_maigret_async, args=(username, proxy, top_sites), daemon=True).start()
+
+    def _run_maigret_async(self, username, proxy, top_sites):
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+            engine = MaigretEngine(logger=self.logger)
+            results = loop.run_until_complete(engine.search(username, timeout=10, proxy=proxy, top=top_sites))
+
+            self.after(0, self._on_maigret_complete, results)
+        except Exception as e:
+            self.after(0, self._on_maigret_error, str(e))
+        finally:
+            loop.close()
+
+    def _on_maigret_complete(self, results):
+        self.maigret_progress.stop()
+        self.maigret_progress.set(1)
+        self.maigret_is_running = False
+        self.maigret_search_btn.configure(state="normal", text="Deep Search")
+
+        if not results:
+            self.maigret_result_box.insert("end", "[-] No accounts found.\n")
+            return
+
+        self.maigret_result_box.insert("end", f"[+] Found {len(results)} accounts:\n", "header")
+        for res in results:
+            self.maigret_result_box.insert("end", f" - {res['site']}: ", "header")
+            self.maigret_result_box.insert("end", f"{res['url_user']}\n", "found")
+
+            # Print additional profile data if any
+            data = res.get('data', {})
+            if data:
+                for k, v in data.items():
+                    if v:
+                        self.maigret_result_box.insert("end", f"      {k}: {v}\n")
+        self.maigret_result_box.insert("end", "\n[*] Deep Search Completed.\n", "header")
+
+    def _on_maigret_error(self, err):
+        self.maigret_progress.stop()
+        self.maigret_progress.set(0)
+        self.maigret_is_running = False
+        self.maigret_search_btn.configure(state="normal", text="Deep Search")
+        self.maigret_result_box.insert("end", f"[!] Error during search: {err}\n", "error")
 
 def main():
     app = SherlockGUI()

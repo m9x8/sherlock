@@ -56,4 +56,3 @@ poetry run sherlock [username]
 ## Privacy & Ethics
 
 **No Shit Sherlock** is designed for authorized, legal investigations, red-teaming, and cybersecurity research only. Do not use this framework for malicious activities, doxing, or stalking.
-
