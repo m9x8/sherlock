@@ -101,7 +101,7 @@ class DoxProfiler:
         for category, query_str in queries_to_run:
             if stop_event and stop_event.is_set():
                 break
-            hits = self.phone_osint._duckduckgo_search(query_str)
+            hits = self.phone_osint._advanced_search(query_str)
             results[category] = hits
             current_query += 1
             if progress_callback:

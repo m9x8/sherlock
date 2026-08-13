@@ -6,7 +6,7 @@ def test_person_osint_search():
     p = PersonOSINT()
 
     # Mock search so we don't hit the real network during testing
-    p.phone_osint._duckduckgo_search = MagicMock(return_value=[
+    p.phone_osint._advanced_search = MagicMock(return_value=[
         {"title": "John Doe Profile", "url": "https://linkedin.com/in/johndoe", "snippet": "A dummy LinkedIn bio"}
     ])
 

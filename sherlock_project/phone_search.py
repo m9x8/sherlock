@@ -12,25 +12,6 @@ import phonenumbers
 from phonenumbers import carrier, geocoder, timezone
 from typing import Dict, List, Any
 
-# Suppress the duckduckgo_search renaming RuntimeWarning before importing DDGS
-import warnings
-import sys
-try:
-    import duckduckgo_search
-    # Intercept and disable the specific RuntimeWarning regarding renaming
-    _orig_warn = warnings.warn
-    def _patched_warn(message, category=None, stacklevel=1, *args, **kwargs):
-        if category == RuntimeWarning and "duckduckgo_search" in str(message):
-            return
-        return _orig_warn(message, category, stacklevel, *args, **kwargs)
-    warnings.warn = _patched_warn
-    # Also patch inside the duckduckgo_search module's namespace if already bound
-    if hasattr(duckduckgo_search, "duckduckgo_search"):
-        duckduckgo_search.duckduckgo_search.warnings.warn = _patched_warn
-except Exception:
-    pass
-
-from duckduckgo_search import DDGS
 from sherlock_project.headers import get_high_end_headers
 
 class PhoneOSINT:
@@ -112,7 +93,7 @@ class PhoneOSINT:
                 "error": str(e)
             }
 
-    def _duckduckgo_search(self, query: str) -> List[Dict[str, str]]:
+    def _advanced_search(self, query: str) -> List[Dict[str, str]]:
         """
         Performs a search using Damru (Undetected Android Browser Driver)
         to completely bypass CAPTCHAs and bot-detection on Google Search, fulfilling
@@ -127,44 +108,40 @@ class PhoneOSINT:
 
         results = []
         try:
-            # We use the Damru core bypass logic directly integrated into our Stealth engine
-            url = f"https://www.google.com/search?q={urllib.parse.quote(query)}&num=15"
+            # High-end dynamic query formatting and Google scraping using Damru
+            url = f"https://www.google.com/search?q={urllib.parse.quote(query)}&num=15&hl=nl"
             headers = get_high_end_headers()
+
+            # Using damru bypass to avoid blocks natively
             status, text = fetch_html_bypass(
                 url=url,
                 user_agent=headers.get("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"),
-                accept_language=headers.get("Accept-Language", "en-US,en;q=0.9"),
+                accept_language=headers.get("Accept-Language", "nl-NL,nl;q=0.9,en-US;q=0.8,en;q=0.7"),
                 timeout=self.timeout
             )
 
             if status == 200 and text:
                 soup = BeautifulSoup(text, "html.parser")
+
+                # Google search result extraction logic
                 for g in soup.find_all('div', class_='g'):
                     a = g.find('a')
-                    if a and a.get('href'):
+                    if a and a.get('href') and not a.get('href').startswith('/'):
                         title = g.find('h3')
                         if title:
                             title_text = title.text
                             href = a.get('href')
-                            snippet_div = g.find('div', {'style': '-webkit-line-clamp:2'}) or g.find('div', class_='VwiC3b')
+                            # Multiple snippet classes for better scraping resilience
+                            snippet_div = g.find('div', {'style': '-webkit-line-clamp:2'}) or g.find('div', class_='VwiC3b') or g.find('div', class_='IsZvec')
                             snippet = snippet_div.text if snippet_div else ""
                             results.append({
                                 "title": title_text,
                                 "url": href,
                                 "snippet": snippet
                             })
-            else:
-                # Fallback to DDGS if Google search blocks it completely
-                from ddgs import DDGS
-                res = DDGS(timeout=self.timeout).text(query, max_results=15)
-                for r in res:
-                    results.append({
-                        "title": r.get("title", "No Title"),
-                        "url": r.get("href", ""),
-                        "snippet": r.get("body", "No Snippet")
-                    })
         except Exception as e:
-            pass
+            import logging
+            logging.error(f"Error in _advanced_search: {e}")
         return results
 
     def search_phone_mentions(self, meta: Dict[str, Any], stop_event=None, progress_callback=None) -> Dict[str, List[Dict[str, str]]]:
@@ -194,14 +171,14 @@ class PhoneOSINT:
         if stop_event and stop_event.is_set():
             return {"General Web Mentions": [], "Social Media Matches": []}
 
-        general_results = self._duckduckgo_search(query_general)
+        general_results = self._advanced_search(query_general)
         if progress_callback:
             progress_callback(1, 2)
 
         if stop_event and stop_event.is_set():
             return {"General Web Mentions": general_results, "Social Media Matches": []}
 
-        social_results = self._duckduckgo_search(query_social)
+        social_results = self._advanced_search(query_social)
         if progress_callback:
             progress_callback(2, 2)
 
@@ -266,7 +243,7 @@ class PhoneOSINT:
         for category, query in dorks.items():
             if stop_event and stop_event.is_set():
                 break
-            results[category] = self._duckduckgo_search(query)
+            results[category] = self._advanced_search(query)
             current_step += 1
             if progress_callback:
                 progress_callback(current_step, total_steps)
@@ -325,7 +302,7 @@ class PhoneOSINT:
         for category, query in dorks.items():
             if stop_event and stop_event.is_set():
                 break
-            results[category] = self._duckduckgo_search(query)
+            results[category] = self._advanced_search(query)
             current_step += 1
             if progress_callback:
                 progress_callback(current_step, total_steps)
