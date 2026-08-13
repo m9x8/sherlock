@@ -122,7 +122,7 @@ class PhoneOSINT:
         # Attempt standard library search first
         try:
             with DDGS(timeout=self.timeout) as ddgs:
-                ddg_results = ddgs.text(query, max_results=30)
+                ddg_results = ddgs.text(query, max_results=50, backend="html")
                 for r in ddg_results:
                     results.append({
                         "title": r.get("title", "No Title"),
@@ -173,7 +173,7 @@ class PhoneOSINT:
                                         "snippet": snippet or "No Snippet"
                                     })
             except Exception as fe:
-                print(f"Direct HTML fallback search failed: {fe}")
+                pass
 
         return results
 
