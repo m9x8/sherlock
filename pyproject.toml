@@ -68,6 +68,7 @@ bs4 = "^0.0.2"
 python-whois = "^0.9.6"
 shodan = "^1.31.0"
 cryptography = "^50.0.0"
+geopy = "^2.5.0"
 
 [tool.poetry.group.dev.dependencies]
 jsonschema = "^4.0.0"

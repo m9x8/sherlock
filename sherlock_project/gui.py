@@ -18,6 +18,12 @@ import subprocess
 import random
 
 # Core Sherlock imports
+from sherlock_project.ui_orchestrator import UIOrchestrator
+from sherlock_project.socmint_deep import SocmintDeepEngine
+from sherlock_project.company_deep import CompanyDeepEngine
+from sherlock_project.phone_recon import PhoneReconEngine
+from sherlock_project.geoint_engine import GeointEngine
+from sherlock_project.hibp_checker import HIBPChecker
 from sherlock_project.sherlock import sherlock, SitesInformation
 from sherlock_project.notify import QueryNotify
 from sherlock_project.result import QueryStatus, QueryResult
@@ -318,6 +324,21 @@ class SherlockGUI(ctk.CTk):
         self.stop_event = threading.Event()
         self.active_processes = []
 
+        # Async Orchestrator
+        self.orchestrator = UIOrchestrator(
+            gui_callback_msg=self._orchestrator_msg_callback,
+            gui_callback_progress=self._orchestrator_progress_callback,
+            gui_callback_result=self._orchestrator_result_callback
+        )
+        self.after(100, self.orchestrator.process_queue_sync, self)
+
+        # Deep engines
+        self.socmint_engine = SocmintDeepEngine()
+        self.company_engine = CompanyDeepEngine()
+        self.phone_engine = PhoneReconEngine()
+        self.geoint_engine = GeointEngine()
+        self.hibp_engine = HIBPChecker()
+
         # Main active variables
         self.search_results = {}
         self.username_dorks_results = {}
@@ -487,6 +508,54 @@ class SherlockGUI(ctk.CTk):
                 pass
         self.active_processes.clear()
         self.searching = False
+        if hasattr(self, 'orchestrator'):
+            self.orchestrator.stop()
+
+    # ------------------ ORCHESTRATOR CALLBACKS ------------------
+    def _orchestrator_msg_callback(self, text):
+        if hasattr(self, 'text_dox_results'):
+            self._insert_text(self.text_dox_results, f"{text}\n")
+
+    def _orchestrator_progress_callback(self, current, total):
+        pass
+
+    def _orchestrator_result_callback(self, category, data):
+        # Create filter checkbox if it doesn't exist
+        if hasattr(self, 'filter_panel') and category not in self.filter_checkboxes:
+            cb = ctk.CTkCheckBox(self.filter_panel, text=category.capitalize(), command=self._apply_dox_filters)
+            cb.select()
+            cb.pack(pady=5, anchor="w", padx=10)
+            self.filter_checkboxes[category] = cb
+
+        if not hasattr(self, 'dox_async_results'):
+            self.dox_async_results = []
+        self.dox_async_results.append((category, data))
+
+        self._apply_dox_filters()
+
+    def _apply_dox_filters(self):
+        if not hasattr(self, 'text_dox_results') or not hasattr(self, 'dox_async_results'):
+            return
+
+        active_categories = [cat for cat, cb in getattr(self, 'filter_checkboxes', {}).items() if cb.get()]
+
+        self._clear_textbox(self.text_dox_results)
+        # Redisplay base results if they exist
+        if hasattr(self, 'dox_results'):
+            for category, items in self.dox_results.items():
+                self._insert_text(self.text_dox_results, f"[ {category.upper()} ]\n")
+                if not items:
+                    self._insert_text(self.text_dox_results, " Geen vermeldingen gevonden.\n\n")
+                else:
+                    for item in items:
+                        self._insert_text(self.text_dox_results, f"• {item['title']}\n  Link: {item['url']}\n\n")
+
+        self._insert_text(self.text_dox_results, "\n[ ASYNC DEEP INTEL ]\n")
+        for cat, data in self.dox_async_results:
+            if not active_categories or cat in active_categories:
+                 self._insert_text(self.text_dox_results, f"• {cat.upper()}: {data}\n")
+
+
 
     def _on_link_click(self, event):
         try:
@@ -1115,6 +1184,10 @@ class SherlockGUI(ctk.CTk):
         results_panel.grid_columnconfigure(0, weight=1)
 
         self.text_dox_results = ctk.CTkTextbox(results_panel, font=ctk.CTkFont(size=13))
+        self.filter_panel = ctk.CTkFrame(results_panel, width=200)
+        self.filter_panel.grid(row=0, column=1, sticky="ns", padx=5, pady=15)
+        ctk.CTkLabel(self.filter_panel, text="Live Filters", font=ctk.CTkFont(weight="bold")).pack(pady=10)
+        self.filter_checkboxes = {}
         self.text_dox_results.grid(row=0, column=0, sticky="nsew", padx=15, pady=15)
         self.text_dox_results.configure(state="disabled")
         self._setup_textbox_tags(self.text_dox_results)
@@ -1773,6 +1846,13 @@ class SherlockGUI(ctk.CTk):
             stop_event=self.stop_event,
             progress_callback=update_progress
         )
+
+        # Fire off our async deep engines as background tasks to demonstrate orchestrator
+        if self.current_dox_username:
+            self.orchestrator.submit_task("socmint", self.socmint_engine.run_all(self.current_dox_username))
+        if self.current_dox_phone:
+            self.orchestrator.submit_task("phone", self.phone_engine.run_all(self.current_dox_phone))
+
         self.dox_results = results
 
         self._clear_textbox(self.text_dox_results)
