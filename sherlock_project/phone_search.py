@@ -108,8 +108,8 @@ class PhoneOSINT:
 
         results = []
         try:
-            # High-end dynamic query formatting and Google scraping using Damru
-            url = f"https://www.google.com/search?q={urllib.parse.quote(query)}&num=15&hl=nl"
+            # High-end dynamic query formatting and DuckDuckGo scraping using Damru
+            url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
             headers = get_high_end_headers()
 
             # Using damru bypass to avoid blocks natively
@@ -123,22 +123,26 @@ class PhoneOSINT:
             if status == 200 and text:
                 soup = BeautifulSoup(text, "html.parser")
 
-                # Google search result extraction logic
-                for g in soup.find_all('div', class_='g'):
-                    a = g.find('a')
-                    if a and a.get('href') and not a.get('href').startswith('/'):
-                        title = g.find('h3')
-                        if title:
-                            title_text = title.text
-                            href = a.get('href')
-                            # Multiple snippet classes for better scraping resilience
-                            snippet_div = g.find('div', {'style': '-webkit-line-clamp:2'}) or g.find('div', class_='VwiC3b') or g.find('div', class_='IsZvec')
-                            snippet = snippet_div.text if snippet_div else ""
-                            results.append({
-                                "title": title_text,
-                                "url": href,
-                                "snippet": snippet
-                            })
+                # DuckDuckGo HTML search result extraction logic
+                for a in soup.find_all('a', class_='result__url'):
+                    href = a.get('href')
+                    # Extract actual URL from DuckDuckGo redirect link
+                    if href and 'uddg=' in href:
+                        parsed_href = urllib.parse.parse_qs(urllib.parse.urlparse(href).query)
+                        if 'uddg' in parsed_href:
+                            href = urllib.parse.unquote(parsed_href['uddg'][0])
+
+                    result_div = a.find_parent('div', class_='result__body')
+                    if result_div:
+                        title_elem = result_div.find('h2', class_='result__title')
+                        title = title_elem.text.strip() if title_elem else ""
+                        snippet_elem = result_div.find('a', class_='result__snippet')
+                        snippet = snippet_elem.text.strip() if snippet_elem else ""
+                        results.append({
+                            "title": title,
+                            "url": href,
+                            "snippet": snippet
+                        })
         except Exception as e:
             import logging
             logging.error(f"Error in _advanced_search: {e}")
