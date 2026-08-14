@@ -47,7 +47,7 @@ class CompanyDeepEngine:
              return {"platform": "OpenCorporates", "error": str(e)}
 
     async def search_sec_edgar(self, session: AsyncSession, company_name: str) -> dict:
-        # SEC EDGAR requires a specific user agent format
+        # SEC EDGAR requires a specific user agent format according to fair access policy.
         headers = {'User-Agent': 'SherlockProject (contact@sherlockproject.xyz)'}
         url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={company_name}&owner=exclude&action=getcompany"
         try:
