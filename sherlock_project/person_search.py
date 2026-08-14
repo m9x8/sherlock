@@ -14,8 +14,9 @@ class PersonOSINT:
 
     def search_person(self, first_name: str, last_name: str, extra_info: str = "", stop_event=None, progress_callback=None) -> Dict[str, List[Dict[str, str]]]:
         """
-        Runs high-end name OSINT queries across several categories using DuckDuckGo
-        to locate exact matches on social profiles, resumes, news, directories, and leak platforms.
+        Runs high-end name OSINT queries across several categories using Google Dorks
+        via the Damru bypass engine to locate exact matches on social profiles, resumes,
+        news, directories, and leak platforms.
         """
         if not first_name or not last_name:
             return {}
