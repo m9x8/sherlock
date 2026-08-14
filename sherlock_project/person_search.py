@@ -46,13 +46,16 @@ class PersonOSINT:
         total_steps = len(dorks)
         current_step = 0
 
-        for category, query in dorks.items():
-            if stop_event and stop_event.is_set():
-                break
+        try:
+            for category, query in dorks.items():
+                if stop_event and stop_event.is_set():
+                    break
 
-            results[category] = self.phone_osint._advanced_search(query)
-            current_step += 1
-            if progress_callback:
-                progress_callback(current_step, total_steps)
+                results[category] = self.phone_osint._advanced_search(query)
+                current_step += 1
+                if progress_callback:
+                    progress_callback(current_step, total_steps)
+        finally:
+            self.phone_osint.close_driver()
 
         return results

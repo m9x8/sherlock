@@ -70,6 +70,8 @@ cryptography = "^50.0.0"
 geopy = "^2.5.0"
 maigret = {git = "https://github.com/m9x8/maigreta.git"}
 damru = {git = "https://github.com/akwin1234/damru.git"}
+selenium = "^4.47.0"
+webdriver-manager = "^4.1.2"
 
 [tool.poetry.group.dev.dependencies]
 jsonschema = "^4.0.0"

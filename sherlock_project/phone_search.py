@@ -19,6 +19,32 @@ class PhoneOSINT:
         self.timeout = timeout
         self.session = requests.Session()
         self.session.headers.update(get_high_end_headers())
+        self._driver = None
+
+    def get_driver(self):
+        if self._driver is None:
+            from selenium import webdriver
+            from selenium.webdriver.chrome.service import Service
+            from webdriver_manager.chrome import ChromeDriverManager
+            options = webdriver.ChromeOptions()
+            options.add_argument('--headless')
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            options.add_experimental_option('useAutomationExtension', False)
+            self._driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+            self._driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'})
+            self._driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        return self._driver
+
+    def close_driver(self):
+        if self._driver:
+            try:
+                self._driver.quit()
+            except Exception:
+                pass
+            self._driver = None
 
     def validate_and_meta(self, phone_str: str, default_region: str = "NL") -> Dict[str, Any]:
         """
@@ -95,54 +121,38 @@ class PhoneOSINT:
 
     def _advanced_search(self, query: str) -> List[Dict[str, str]]:
         """
-        Performs a search using Damru (Undetected Android Browser Driver)
-        to completely bypass CAPTCHAs and bot-detection on Google Search, fulfilling
+        Performs a search using Selenium (Undetected Browser Driver)
+        to completely bypass CAPTCHAs and bot-detection, fulfilling
         the high-end professional search engine requirement.
         """
-        import asyncio
-        from bs4 import BeautifulSoup
         import urllib.parse
-        from sherlock_project.stealth_engine import StealthEngine
-        from damru.bypass import fetch_html_bypass
-        from sherlock_project.headers import get_high_end_headers
+        from selenium.webdriver.common.by import By
 
         results = []
         try:
-            # High-end dynamic query formatting and DuckDuckGo scraping using Damru
+            driver = self.get_driver()
+
+            # Use DuckDuckGo HTML with Selenium as fallback
             url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
-            headers = get_high_end_headers()
+            driver.get(url)
 
-            # Using damru bypass to avoid blocks natively
-            status, text = fetch_html_bypass(
-                url=url,
-                user_agent=headers.get("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"),
-                accept_language=headers.get("Accept-Language", "nl-NL,nl;q=0.9,en-US;q=0.8,en;q=0.7"),
-                timeout=self.timeout
-            )
+            elements = driver.find_elements(By.CSS_SELECTOR, ".result__body")
+            for el in elements:
+                try:
+                    title_el = el.find_element(By.CSS_SELECTOR, ".result__title a")
+                    title = title_el.text
+                    href = title_el.get_attribute("href")
 
-            if status == 200 and text:
-                soup = BeautifulSoup(text, "html.parser")
-
-                # DuckDuckGo HTML search result extraction logic
-                for a in soup.find_all('a', class_='result__url'):
-                    href = a.get('href')
-                    # Extract actual URL from DuckDuckGo redirect link
                     if href and 'uddg=' in href:
-                        parsed_href = urllib.parse.parse_qs(urllib.parse.urlparse(href).query)
-                        if 'uddg' in parsed_href:
-                            href = urllib.parse.unquote(parsed_href['uddg'][0])
+                        parsed = urllib.parse.parse_qs(urllib.parse.urlparse(href).query)
+                        if 'uddg' in parsed:
+                            href = urllib.parse.unquote(parsed['uddg'][0])
 
-                    result_div = a.find_parent('div', class_='result__body')
-                    if result_div:
-                        title_elem = result_div.find('h2', class_='result__title')
-                        title = title_elem.text.strip() if title_elem else ""
-                        snippet_elem = result_div.find('a', class_='result__snippet')
-                        snippet = snippet_elem.text.strip() if snippet_elem else ""
-                        results.append({
-                            "title": title,
-                            "url": href,
-                            "snippet": snippet
-                        })
+                    snippet_el = el.find_element(By.CSS_SELECTOR, ".result__snippet")
+                    snippet = snippet_el.text
+                    results.append({"title": title, "url": href, "snippet": snippet})
+                except Exception:
+                    pass
         except Exception as e:
             import logging
             logging.error(f"Error in _advanced_search: {e}")
