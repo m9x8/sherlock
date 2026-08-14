@@ -2218,7 +2218,7 @@ class SherlockGUI(ctk.CTk):
 
 
     def create_maigret_tab(self):
-        self.maigret_frame = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.maigret_frame = ctk.CTkFrame(self.main_container, fg_color="transparent")
         self.maigret_frame.grid_columnconfigure(0, weight=1)
         self.maigret_frame.grid_rowconfigure(2, weight=1)
 
@@ -2287,18 +2287,22 @@ class SherlockGUI(ctk.CTk):
         threading.Thread(target=self._run_maigret_async, args=(username, proxy, top_sites), daemon=True).start()
 
     def _run_maigret_async(self, username, proxy, top_sites):
+        import asyncio
+        loop = None
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-            engine = MaigretEngine(logger=self.logger)
+            # Initialize Maigret engine without logger if it's missing to avoid AttributeError
+            engine = MaigretEngine(logger=getattr(self, 'logger', None))
             results = loop.run_until_complete(engine.search(username, timeout=10, proxy=proxy, top=top_sites))
 
             self.after(0, self._on_maigret_complete, results)
         except Exception as e:
             self.after(0, self._on_maigret_error, str(e))
         finally:
-            loop.close()
+            if loop:
+                loop.close()
 
     def _on_maigret_complete(self, results):
         self.maigret_progress.stop()
