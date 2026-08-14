@@ -49,7 +49,7 @@ SETTINGS_FILE = os.path.expanduser("~/.sherlock_settings.json")
 
 TRANSLATIONS = {
     "nl": {
-        "title": "No shit Sherlock Professional OSINT Suite",
+        "title": "Premium OSINT Intelligence Suite",
         "tab_username": "Gebruikersnaam Zoeken",
         "tab_phone": "Telefoonnummer Zoeken",
         "tab_company": "Bedrijven Zoeken",
@@ -157,7 +157,7 @@ TRANSLATIONS = {
         "dox_finished": "Dox Dossier succesvol gegenereerd!"
     },
     "en": {
-        "title": "No shit Sherlock Professional OSINT Suite",
+        "title": "Premium OSINT Intelligence Suite",
         "tab_username": "Username Search",
         "tab_phone": "Phone Number Search",
         "tab_company": "Company Search",
@@ -311,6 +311,38 @@ class GUIQueryNotify(QueryNotify):
         self.finish_callback()
 
 
+class EthicalDisclaimerWindow(ctk.CTkToplevel):
+    def __init__(self, master):
+        super().__init__(master)
+        self.title("Disclaimer & Ethical Usage")
+        self.geometry("600x400")
+        self.resizable(False, False)
+
+        # Make it modal
+        self.transient(master)
+        self.grab_set()
+
+        # Force to top
+        self.attributes("-topmost", True)
+
+        msg = (
+            "DISCLAIMER & ETHICAL USAGE\n\n"
+            "This project is only intended to be used for ethical purposes. It should solely "
+            "be utilized to search for your own digital footprint, or with explicit, "
+            "documented permission from the target.\n\n"
+            "Any misuse, malicious gathering of intelligence, or violations of privacy laws "
+            "are strictly prohibited and the responsibility of the user.\n\n"
+            "By clicking 'I Agree', you confirm that you will only use this tool for legal "
+            "and ethical purposes with explicit documented permission."
+        )
+
+        lbl = ctk.CTkLabel(self, text=msg, wraplength=550, justify="left", font=ctk.CTkFont(size=14))
+        lbl.pack(padx=20, pady=40)
+
+        btn = ctk.CTkButton(self, text="I Agree", command=self.destroy, fg_color="#2B6CB0", hover_color="#1A365D")
+        btn.pack(pady=20)
+
+
 class SherlockGUI(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -318,6 +350,14 @@ class SherlockGUI(ctk.CTk):
         # Load persisted settings
         self.settings = load_settings()
         self.language_var = tk.StringVar(value=self.settings.get("language", "nl"))
+
+        # Show ethical disclaimer on startup if not accepted this session
+        self.after(500, self.show_disclaimer)
+
+    def show_disclaimer(self):
+        disclaimer = EthicalDisclaimerWindow(self)
+        self.wait_window(disclaimer)
+
 
         self.title(f"{self.get_text('title')} v{__version__}")
         self.geometry("1150x850")
@@ -496,7 +536,7 @@ class SherlockGUI(ctk.CTk):
         self.settings_title_lbl.configure(text=self.get_text("settings_title"))
         self.lang_section_lbl.configure(text=self.get_text("language_section"))
         self.updates_section_lbl.configure(text=self.get_text("updates_section"))
-        self.current_version_lbl.configure(text=f"{self.get_text('current_version')}: No shit Sherlock v{__version__}")
+        self.current_version_lbl.configure(text=f"{self.get_text('current_version')}: Premium OSINT v{__version__}")
         self.btn_check_updates.configure(text=self.get_text("btn_check_updates"))
         self.shodan_label.configure(text=self.get_text("shodan_api_label"))
         self.entry_shodan.configure(placeholder_text=self.get_text("shodan_api_placeholder"))
@@ -650,7 +690,7 @@ class SherlockGUI(ctk.CTk):
         self.sidebar.grid(row=0, column=0, sticky="nsew")
         self.sidebar.grid_rowconfigure(9, weight=1)
 
-        self.logo_label = ctk.CTkLabel(self.sidebar, text="NO SHIT SHERLOCK", font=ctk.CTkFont(family="Helvetica", size=20, weight="bold"))
+        self.logo_label = ctk.CTkLabel(self.sidebar, text="PREMIUM OSINT", font=ctk.CTkFont(family="Helvetica", size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
 
         # Subtitle for high-end feel
@@ -1365,7 +1405,7 @@ class SherlockGUI(ctk.CTk):
         self.progress_bar.start()
 
         self._clear_textbox(self.text_username_results)
-        self._insert_text(self.text_username_results, f"[*] Initialiseren van No shit Sherlock zoekopdracht voor '{username}'...\n\n")
+        self._insert_text(self.text_username_results, f"[*] Initialiseren van Premium OSINT zoekopdracht voor '{username}'...\n\n")
 
         self._clear_textbox(self.text_username_dorks)
         self._insert_text(self.text_username_dorks, f"[*] Geavanceerde dorking wordt op de achtergrond uitgevoerd...\n")
@@ -1913,7 +1953,7 @@ class SherlockGUI(ctk.CTk):
     def _update_username_results_display(self):
         self._clear_textbox(self.text_username_results)
         if self.current_username:
-            self._insert_text(self.text_username_results, f"[*] No shit Sherlock zoekopdracht resultaten voor '{self.current_username}':\n\n")
+            self._insert_text(self.text_username_results, f"[*] Premium OSINT zoekopdracht resultaten voor '{self.current_username}':\n\n")
 
         filter_query = self.entry_filter_username.get().strip().lower()
         claimed_count = 0
@@ -2024,9 +2064,9 @@ class SherlockGUI(ctk.CTk):
                 elif is_company:
                     ReportGenerator.export_company_txt(filepath, self.current_company, self.company_results)
                 elif is_email:
-                    ReportGenerator.export_simple_txt(filepath, "No shit Sherlock E-mail OSINT Rapport", f"E-mail: {self.current_email}", self.text_email_results.get("1.0", tk.END))
+                    ReportGenerator.export_simple_txt(filepath, "Premium E-mail OSINT Rapport", f"E-mail: {self.current_email}", self.text_email_results.get("1.0", tk.END))
                 elif is_network:
-                    ReportGenerator.export_simple_txt(filepath, "No shit Sherlock Netwerk & Domein OSINT", f"Domein/IP: {self.current_network}", self.text_network_results.get("1.0", tk.END))
+                    ReportGenerator.export_simple_txt(filepath, "Premium Netwerk & Domein OSINT", f"Domein/IP: {self.current_network}", self.text_network_results.get("1.0", tk.END))
                 elif is_person:
                     ReportGenerator.export_company_txt(filepath, f"{self.current_person_first} {self.current_person_last}", self.person_results)
                 elif is_dox:
@@ -2039,9 +2079,9 @@ class SherlockGUI(ctk.CTk):
                 elif is_company:
                     ReportGenerator.export_company_docx(filepath, self.current_company, self.company_results)
                 elif is_email:
-                    ReportGenerator.export_simple_docx(filepath, "No shit Sherlock E-mail OSINT Rapport", f"E-mail: {self.current_email}", self.text_email_results.get("1.0", tk.END))
+                    ReportGenerator.export_simple_docx(filepath, "Premium E-mail OSINT Rapport", f"E-mail: {self.current_email}", self.text_email_results.get("1.0", tk.END))
                 elif is_network:
-                    ReportGenerator.export_simple_docx(filepath, "No shit Sherlock Netwerk & Domein OSINT", f"Domein/IP: {self.current_network}", self.text_network_results.get("1.0", tk.END))
+                    ReportGenerator.export_simple_docx(filepath, "Premium Netwerk & Domein OSINT", f"Domein/IP: {self.current_network}", self.text_network_results.get("1.0", tk.END))
                 elif is_person:
                     ReportGenerator.export_company_docx(filepath, f"{self.current_person_first} {self.current_person_last}", self.person_results)
                 elif is_dox:
@@ -2054,9 +2094,9 @@ class SherlockGUI(ctk.CTk):
                 elif is_company:
                     ReportGenerator.export_company_pdf(filepath, self.current_company, self.company_results)
                 elif is_email:
-                    ReportGenerator.export_simple_pdf(filepath, "No shit Sherlock E-mail OSINT Rapport", f"E-mail: {self.current_email}", self.text_email_results.get("1.0", tk.END))
+                    ReportGenerator.export_simple_pdf(filepath, "Premium E-mail OSINT Rapport", f"E-mail: {self.current_email}", self.text_email_results.get("1.0", tk.END))
                 elif is_network:
-                    ReportGenerator.export_simple_pdf(filepath, "No shit Sherlock Netwerk & Domein OSINT", f"Domein/IP: {self.current_network}", self.text_network_results.get("1.0", tk.END))
+                    ReportGenerator.export_simple_pdf(filepath, "Premium Netwerk & Domein OSINT", f"Domein/IP: {self.current_network}", self.text_network_results.get("1.0", tk.END))
                 elif is_person:
                     ReportGenerator.export_company_pdf(filepath, f"{self.current_person_first} {self.current_person_last}", self.person_results)
                 elif is_dox:
@@ -2114,7 +2154,7 @@ class SherlockGUI(ctk.CTk):
         self.updates_section_lbl = ctk.CTkLabel(update_frame, text=self.get_text("updates_section"), font=ctk.CTkFont(size=14, weight="bold"))
         self.updates_section_lbl.grid(row=0, column=0, padx=15, pady=15, sticky="w")
 
-        self.current_version_lbl = ctk.CTkLabel(update_frame, text=f"{self.get_text('current_version')}: No shit Sherlock v{__version__}", font=ctk.CTkFont(size=13))
+        self.current_version_lbl = ctk.CTkLabel(update_frame, text=f"{self.get_text('current_version')}: Premium OSINT v{__version__}", font=ctk.CTkFont(size=13))
         self.current_version_lbl.grid(row=1, column=0, padx=15, pady=5, sticky="w")
 
         self.update_status_lbl = ctk.CTkLabel(update_frame, text=f"Status: {self.get_text('update_status_idle')}", font=ctk.CTkFont(size=13))
