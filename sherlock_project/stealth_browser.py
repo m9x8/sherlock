@@ -3,6 +3,12 @@ import logging
 from typing import Optional
 
 try:
+    from camoufox.async_api import AsyncCamoufox
+    CAMOUFOX_AVAILABLE = True
+except ImportError:
+    CAMOUFOX_AVAILABLE = False
+
+try:
     import nodriver
     NODRIVER_AVAILABLE = True
 except ImportError:
@@ -15,26 +21,55 @@ logger = logging.getLogger(__name__)
 class StealthBrowser:
     """
     A unified async stealth browser abstraction.
-    Attempts to use `nodriver` for deep CDP-based stealth evasion (like Cloudflare, DataDome).
-    If `nodriver` is unavailable or fails, falls back gracefully to `curl_cffi` via `StealthEngine`.
+    Attempts to use `Camoufox` as the primary engine for top-tier Firefox stealth.
+    Falls back to `nodriver` for deep CDP-based Chrome stealth.
+    If both fail or are unavailable, falls back gracefully to `curl_cffi` via `StealthEngine`.
     """
 
     def __init__(self, use_nodriver: bool = True, timeout: int = 15, proxy: Optional[str] = None):
+        self.use_camoufox = CAMOUFOX_AVAILABLE
         self.use_nodriver = use_nodriver and NODRIVER_AVAILABLE
         self.timeout = timeout
         self.proxy = proxy
 
-        self.browser = None
+        self.camoufox_context = None
+        self.camoufox_browser = None
+        self.camoufox_page = None
+        self.nodriver_browser = None
         self.stealth_engine: Optional[StealthEngine] = None
 
     async def _init_browser(self):
-        if self.use_nodriver and self.browser is None:
+        if self.use_camoufox and self.camoufox_browser is None:
+            try:
+                # Use geoip=True if a proxy is provided
+                kwargs = {"headless": True}
+                if self.proxy:
+                    kwargs["proxy"] = {"server": self.proxy}
+                    kwargs["geoip"] = True
+
+                # AsyncCamoufox returns a context manager that resolves to the browser instance
+                self.camoufox_context = AsyncCamoufox(**kwargs)
+                self.camoufox_browser = await self.camoufox_context.__aenter__()
+                self.camoufox_page = await self.camoufox_browser.new_page()
+            except Exception as e:
+                logger.warning(f"Camoufox failed to start, falling back to nodriver: {e}")
+                self.use_camoufox = False
+                if self.camoufox_context:
+                    try:
+                        await self.camoufox_context.__aexit__(None, None, None)
+                    except:
+                        pass
+                self.camoufox_context = None
+                self.camoufox_browser = None
+                self.camoufox_page = None
+
+        if not self.use_camoufox and self.use_nodriver and self.nodriver_browser is None:
             try:
                 browser_args = ['--headless=new', '--no-sandbox', '--disable-gpu']
                 if self.proxy:
                     browser_args.append(f'--proxy-server={self.proxy}')
 
-                self.browser = await nodriver.start(
+                self.nodriver_browser = await nodriver.start(
                     browser_args=browser_args,
                     sandbox=False
                 )
@@ -42,31 +77,36 @@ class StealthBrowser:
                 logger.warning(f"nodriver failed to start, falling back to curl_cffi: {e}")
                 self.use_nodriver = False
 
-        if not self.use_nodriver and self.stealth_engine is None:
+        if not self.use_camoufox and not self.use_nodriver and self.stealth_engine is None:
             self.stealth_engine = StealthEngine()
 
     async def get_html(self, url: str) -> tuple[int, str]:
         """
-        Fetches the HTML of the page, using nodriver first, then falling back to curl_cffi.
+        Fetches the HTML of the page.
+        Tries Camoufox first, then Nodriver, then falls back to curl_cffi.
         Returns a tuple of (status_code, html_content).
         """
         await self._init_browser()
 
-        if self.use_nodriver and self.browser:
+        if self.use_camoufox and self.camoufox_page:
             try:
-                # Use nodriver to get the page
-                page = await self.browser.get(url)
+                response = await self.camoufox_page.goto(url, wait_until="domcontentloaded")
+                await asyncio.sleep(1) # Humanize slightly
+                html = await self.camoufox_page.content()
+                status = response.status if response else 200
+                return status, html
+            except Exception as e:
+                logger.error(f"Camoufox failed to fetch {url}: {e}, trying fallback")
+                pass
 
-                # We can add humanize behavior here, like a small random sleep
+        if self.use_nodriver and self.nodriver_browser:
+            try:
+                page = await self.nodriver_browser.get(url)
                 await asyncio.sleep(1)
-
                 html = await page.get_content()
-
-                # Assume 200 if we got HTML without throwing, nodriver doesn't expose status easily
                 return 200, html
             except Exception as e:
                 logger.error(f"nodriver failed to fetch {url}: {e}, trying fallback")
-                # Fallback to curl_cffi
                 pass
 
         # Fallback using curl_cffi
@@ -74,8 +114,6 @@ class StealthBrowser:
             self.stealth_engine = StealthEngine()
 
         try:
-            # We don't have the context of the async block, StealthEngine has `request` method
-            # Assuming StealthEngine.request is an async method returning a Response object
             if asyncio.iscoroutinefunction(self.stealth_engine.request):
                 response = await self.stealth_engine.request("GET", url, timeout=self.timeout)
             else:
@@ -88,32 +126,52 @@ class StealthBrowser:
 
     async def screenshot(self, url: str, path: str):
         """
-        Takes a screenshot of the url. Only works if nodriver is active.
+        Takes a screenshot of the url.
         """
         await self._init_browser()
-        if self.use_nodriver and self.browser:
+
+        if self.use_camoufox and self.camoufox_page:
             try:
-                page = await self.browser.get(url)
-                await asyncio.sleep(2)  # Wait for rendering
+                await self.camoufox_page.goto(url)
+                await asyncio.sleep(2)
+                await self.camoufox_page.screenshot(path=path)
+                return True
+            except Exception as e:
+                logger.error(f"Camoufox screenshot failed: {e}")
+                return False
+
+        if self.use_nodriver and self.nodriver_browser:
+            try:
+                page = await self.nodriver_browser.get(url)
+                await asyncio.sleep(2)
                 await page.save_screenshot(path)
                 return True
             except Exception as e:
-                logger.error(f"Screenshot failed: {e}")
+                logger.error(f"Nodriver screenshot failed: {e}")
                 return False
+
         return False
 
     async def close(self):
         """
-        Closes the browser or engine instances.
+        Closes the browser or engine instances cleanly.
         """
-        if self.browser:
+        if self.camoufox_context:
             try:
-                self.browser.stop()
-                # give nodriver time to cleanup so we don't get the base_subprocess error
+                await self.camoufox_context.__aexit__(None, None, None)
+            except Exception:
+                pass
+            self.camoufox_context = None
+            self.camoufox_browser = None
+            self.camoufox_page = None
+
+        if self.nodriver_browser:
+            try:
+                self.nodriver_browser.stop()
                 await asyncio.sleep(0.1)
             except Exception:
                 pass
-            self.browser = None
+            self.nodriver_browser = None
 
         if self.stealth_engine:
             await self.stealth_engine.close()

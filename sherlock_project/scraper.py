@@ -16,13 +16,20 @@ class HighEndScraper:
 
     async def get_browser(self):
         if self.browser is None:
-            self.browser = StealthBrowser(timeout=self.timeout)
+            self.browser = await StealthBrowser(timeout=self.timeout).__aenter__()
         return self.browser
 
     async def close(self):
         if self.browser:
-            await self.browser.close()
+            await self.browser.__aexit__(None, None, None)
             self.browser = None
+
+    async def __aenter__(self):
+        await self.get_browser()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
 
     async def scrape_phone_nl_registries(self, clean_number: str) -> list[dict[str, str]]:
         """
