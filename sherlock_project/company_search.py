@@ -33,7 +33,9 @@ class CompanyOSINT:
                 "Companies House (UK)": f"site:find-and-update.company-information.service.gov.uk {escaped_name}",
                 "Handelsregister (DE)": f"site:handelsregister.de {escaped_name}",
                 "KBO / KBO-BCE (BE)": f"site:kbopub.economie.fgov.be {escaped_name}",
-                "OpenCorporates Global": f"site:opencorporates.com {escaped_name} -site:opencorporates.com/companies/nl -site:opencorporates.com/companies/gb"
+                "OpenCorporates Global": f"site:opencorporates.com {escaped_name} -site:opencorporates.com/companies/nl -site:opencorporates.com/companies/gb",
+                "Kompass (Global)": f"site:kompass.com {escaped_name}",
+                "Dun & Bradstreet": f"site:dnb.com {escaped_name}"
             },
             "Social Media & Profielen": {
                 "LinkedIn": f"site:linkedin.com/company {escaped_name}",
@@ -99,8 +101,12 @@ class CompanyOSINT:
             filtered_categories = {
                 "Officiële Registers (UK)": {
                     "Companies House (UK)": f"site:find-and-update.company-information.service.gov.uk {escaped_name}",
-                    "OpenCorporates UK": f"site:opencorporates.com/companies/gb {escaped_name}"
-                },
+                "Handelsregister (DE)": f"site:handelsregister.de {escaped_name}",
+                "KBO / KBO-BCE (BE)": f"site:kbopub.economie.fgov.be {escaped_name}",
+                "OpenCorporates Global": f"site:opencorporates.com {escaped_name} -site:opencorporates.com/companies/nl -site:opencorporates.com/companies/gb",
+                "Kompass (Global)": f"site:kompass.com {escaped_name}",
+                "Dun & Bradstreet": f"site:dnb.com {escaped_name}"
+            },
                 "Social Media & Profielen": categories["Social Media & Profielen"],
                 "Website & Domein Vermeldingen": categories["Website & Domein Vermeldingen"],
                 "Nieuws & Persberichten": {
@@ -206,11 +212,8 @@ class CompanyOSINT:
                 import asyncio
 
                 async def _scrape_and_close():
-                    scraper = HighEndScraper()
-                    try:
+                    async with HighEndScraper() as scraper:
                         return await scraper.scrape_company_direct_details(company_name)
-                    finally:
-                        await scraper.close()
 
                 try:
                     loop = asyncio.get_running_loop()

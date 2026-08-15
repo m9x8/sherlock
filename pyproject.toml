@@ -69,9 +69,8 @@ shodan = "^1.31.0"
 cryptography = "^50.0.0"
 geopy = "^2.5.0"
 maigret = {git = "https://github.com/m9x8/maigreta.git"}
-selenium = "^4.47.0"
-webdriver-manager = "^4.1.2"
 nodriver = "^0.50.3"
+camoufox = {extras = ["geoip"], version = "^0.5.4"}
 
 [tool.poetry.group.dev.dependencies]
 jsonschema = "^4.0.0"

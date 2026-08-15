@@ -121,38 +121,57 @@ class PhoneOSINT:
 
     def _advanced_search(self, query: str) -> List[Dict[str, str]]:
         """
-        Performs a search using Selenium (Undetected Browser Driver)
-        to completely bypass CAPTCHAs and bot-detection, fulfilling
-        the high-end professional search engine requirement.
+        Performs a search using StealthBrowser abstraction (Camoufox -> Nodriver -> curl_cffi)
+        to bypass CAPTCHAs and bot-detection, fulfilling the high-end professional search engine requirement.
         """
         import urllib.parse
-        from selenium.webdriver.common.by import By
+        from bs4 import BeautifulSoup
+        from sherlock_project.stealth_browser import StealthBrowser
+        import asyncio
 
         results = []
         try:
-            driver = self.get_driver()
-
-            # Use DuckDuckGo HTML with Selenium as fallback
             url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
-            driver.get(url)
 
-            elements = driver.find_elements(By.CSS_SELECTOR, ".result__body")
-            for el in elements:
-                try:
-                    title_el = el.find_element(By.CSS_SELECTOR, ".result__title a")
-                    title = title_el.text
-                    href = title_el.get_attribute("href")
+            async def _fetch():
+                async with StealthBrowser(timeout=self.timeout) as browser:
+                    return await browser.get_html(url)
 
-                    if href and 'uddg=' in href:
-                        parsed = urllib.parse.parse_qs(urllib.parse.urlparse(href).query)
-                        if 'uddg' in parsed:
-                            href = urllib.parse.unquote(parsed['uddg'][0])
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
 
-                    snippet_el = el.find_element(By.CSS_SELECTOR, ".result__snippet")
-                    snippet = snippet_el.text
-                    results.append({"title": title, "url": href, "snippet": snippet})
-                except Exception:
-                    pass
+            if loop and loop.is_running():
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor(1) as pool:
+                    def run_in_thread():
+                        return asyncio.run(_fetch())
+                    status, html = pool.submit(run_in_thread).result()
+            else:
+                status, html = asyncio.run(_fetch())
+
+            if status == 200 and html:
+                soup = BeautifulSoup(html, "html.parser")
+                elements = soup.select(".result__body")
+                for el in elements:
+                    try:
+                        title_el = el.select_one(".result__title a")
+                        if not title_el:
+                            continue
+                        title = title_el.get_text(strip=True)
+                        href = title_el.get("href")
+
+                        if href and 'uddg=' in href:
+                            parsed = urllib.parse.parse_qs(urllib.parse.urlparse(href).query)
+                            if 'uddg' in parsed:
+                                href = urllib.parse.unquote(parsed['uddg'][0])
+
+                        snippet_el = el.select_one(".result__snippet")
+                        snippet = snippet_el.get_text(strip=True) if snippet_el else ""
+                        results.append({"title": title, "url": href, "snippet": snippet})
+                    except Exception:
+                        pass
         except Exception as e:
             import logging
             logging.error(f"Error in _advanced_search: {e}")
@@ -241,13 +260,16 @@ class PhoneOSINT:
 
         dorks = {
             "Lek- & Paste-sites": f"(site:pastebin.com OR site:paste.org OR site:github.com OR site:gitlab.com OR site:gitter.im OR site:paste2.org OR site:ghostbin.co OR site:controlc.com OR site:pastelink.net OR site:rentry.co) ({terms_or})",
+            "Gelekte Databases (Deep)": f"(site:breached.vc OR site:raidforums.com OR site:nulled.to) ({terms_or})",
             "Documenten & Resumes": f"(filetype:pdf OR filetype:doc OR filetype:docx OR filetype:xls OR filetype:xlsx OR filetype:rtf OR filetype:txt OR filetype:csv OR filetype:tsv) ({terms_or})",
             "Professionele Netwerken": f"(site:linkedin.com/in OR site:linkedin.com/pub OR site:xing.com OR site:rocketreach.co OR site:apollo.io OR site:zoominfo.com OR site:lusha.com OR site:signalhire.com OR site:contactout.com) ({terms_or})",
             "Chat- & Messenger-groepen": f"(site:t.me OR site:chat.whatsapp.com OR site:discord.gg OR site:signal.group OR site:line.me OR site:viber.com) ({terms_or})",
             "Adresboeken & Spam-registries": f"(site:tellows.nl OR site:tellows.com OR site:sync.me OR site:truecaller.com OR site:whocalledme.com OR site:wieheeftgebeld.nl OR site:telefoonboek.nl OR site:openingstijden.nl OR site:zoeknummer.nl OR site:wieheeftmijgebeld.nl OR site:spamcalls.net) ({terms_or})",
             "Marktplaatsen & Advertenties": f"(site:marktplaats.nl OR site:tweakers.net OR site:2dehands.be OR site:craigslist.org OR site:ebay.com) ({terms_or})",
             "Forums & Blogs": f"(site:forum.fok.nl OR site:gathering.tweakers.net OR site:kassa.bnnvara.nl OR site:radar.avrotros.nl) ({terms_or})",
-            "Overheid & Openbare Documenten": f"(site:overheid.nl OR site:rijksoverheid.nl OR site:officielebekendmakingen.nl OR site:rechtspraak.nl) ({terms_or})"
+            "Overheid & Openbare Documenten": f"(site:overheid.nl OR site:rijksoverheid.nl OR site:officielebekendmakingen.nl OR site:rechtspraak.nl) ({terms_or})",
+            "Archieven & Cached": f"site:archive.org ({terms_or})",
+            "KVK & Bedrijvengidsen (Int)": f"(site:opencorporates.com OR site:kompass.com) ({terms_or})"
         }
 
         results = {}
@@ -269,11 +291,8 @@ class PhoneOSINT:
                 import asyncio
 
                 async def _scrape_and_close():
-                    scraper = HighEndScraper(timeout=self.timeout)
-                    try:
+                    async with HighEndScraper(timeout=self.timeout) as scraper:
                         return await scraper.scrape_phone_nl_registries(clean_national or e164)
-                    finally:
-                        await scraper.close()
 
                 try:
                     loop = asyncio.get_running_loop()
