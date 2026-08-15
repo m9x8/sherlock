@@ -203,8 +203,29 @@ class CompanyOSINT:
         if not (stop_event and stop_event.is_set()) and country_filter in ["Alle", "Nederland"]:
             from sherlock_project.scraper import HighEndScraper
             try:
-                scraper = HighEndScraper()
-                direct_hits = scraper.scrape_company_direct_details(company_name)
+                import asyncio
+
+                async def _scrape_and_close():
+                    scraper = HighEndScraper()
+                    try:
+                        return await scraper.scrape_company_direct_details(company_name)
+                    finally:
+                        await scraper.close()
+
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+
+                if loop and loop.is_running():
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor(1) as pool:
+                        def run_in_thread():
+                            return asyncio.run(_scrape_and_close())
+                        direct_hits = pool.submit(run_in_thread).result()
+                else:
+                    direct_hits = asyncio.run(_scrape_and_close())
+
                 if direct_hits:
                     target_cat = "Officiële Registers (NL)" if "Officiële Registers (NL)" in results else "Officiële Registers"
                     if target_cat not in results:
