@@ -664,7 +664,7 @@ class SherlockGUI(ctk.CTk):
         textbox.configure(state="disabled")
 
     def _setup_textbox_tags(self, textbox):
-        textbox.tag_config("link", foreground="#3182CE", underline=True)
+        textbox._textbox.tag_config("link", foreground="#3182CE", underline=True)
         textbox.tag_bind("link", "<Button-1>", self._on_link_click)
         textbox.tag_bind("link", "<Enter>", lambda e: textbox.configure(cursor="hand2"))
         textbox.tag_bind("link", "<Leave>", lambda e: textbox.configure(cursor="xterm"))

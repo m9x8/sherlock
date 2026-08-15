@@ -160,7 +160,14 @@ class StealthEngine:
 
         # Merge kwargs headers with default headers if provided
         if 'headers' in kwargs:
-            kwargs['headers'] = {**self._get_headers(), **kwargs['headers']}
+            caller_headers = kwargs.pop('headers')
+            # Remove any user-agent or sec-ch-ua headers from caller to prevent mismatch
+            clean_caller = {k: v for k, v in caller_headers.items() if k.lower() not in [
+                'user-agent', 'sec-ch-ua', 'sec-ch-ua-mobile', 'sec-ch-ua-platform'
+            ]}
+            kwargs['headers'] = {**self._get_headers(), **clean_caller}
+        else:
+            kwargs['headers'] = self._get_headers()
 
         retries = 0
         base_delay = 1.0
