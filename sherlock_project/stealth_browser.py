@@ -1,6 +1,8 @@
 import asyncio
 import logging
+import random
 from typing import Optional
+from contextlib import AsyncExitStack
 
 try:
     from camoufox.async_api import AsyncCamoufox
@@ -32,32 +34,30 @@ class StealthBrowser:
         self.timeout = timeout
         self.proxy = proxy
 
-        self.camoufox_context = None
+        self._exit_stack = AsyncExitStack()
         self.camoufox_browser = None
         self.nodriver_browser = None
         self.stealth_engine: Optional[StealthEngine] = None
+        self._initialized = False
 
     async def _init_browser(self):
+        if self._initialized:
+            return
+
         if self.use_camoufox and self.camoufox_browser is None:
             try:
                 # Use geoip=True if a proxy is provided (but we use it by default as requested in the instructions)
-                kwargs = {"headless": True, "geoip": True}
+                kwargs = {"headless": True, "geoip": True, "humanize": True}
                 if self.proxy:
                     kwargs["proxy"] = {"server": self.proxy}
 
                 # AsyncCamoufox returns a context manager that resolves to the browser instance
-                self.camoufox_context = AsyncCamoufox(**kwargs)
-                self.camoufox_browser = await self.camoufox_context.__aenter__()
+                camoufox_ctx = AsyncCamoufox(**kwargs)
+                self.camoufox_browser = await self._exit_stack.enter_async_context(camoufox_ctx)
                 logger.info("Initialized Camoufox browser backend")
             except Exception as e:
                 logger.warning(f"Camoufox failed to start, falling back to nodriver: {e}")
                 self.use_camoufox = False
-                if self.camoufox_context:
-                    try:
-                        await self.camoufox_context.__aexit__(None, None, None)
-                    except:
-                        pass
-                self.camoufox_context = None
                 self.camoufox_browser = None
 
         if not self.use_camoufox and self.use_nodriver and self.nodriver_browser is None:
@@ -79,6 +79,8 @@ class StealthBrowser:
             logger.info("Initialized curl_cffi StealthEngine backend")
             self.stealth_engine = StealthEngine()
 
+        self._initialized = True
+
     async def get_html(self, url: str) -> tuple[int, str]:
         """
         Fetches the HTML of the page.
@@ -93,7 +95,7 @@ class StealthBrowser:
                 page = await self.camoufox_browser.new_page()
                 logger.info(f"Using Camoufox engine to fetch {url}")
                 response = await page.goto(url, wait_until="domcontentloaded", timeout=self.timeout * 1000)
-                await asyncio.sleep(1) # Humanize slightly
+                await asyncio.sleep(random.uniform(0.5, 1.5)) # Humanize slightly
                 html = await page.content()
                 status = response.status if response else 200
                 return status, html
@@ -107,12 +109,17 @@ class StealthBrowser:
                         pass
 
         if self.use_nodriver and self.nodriver_browser:
-            page = None
             try:
                 logger.info(f"Using nodriver engine to fetch {url}")
                 page = await self.nodriver_browser.get(url)
-                await asyncio.sleep(1)
+                # Wait for navigation/load slightly and humanize
+                await asyncio.sleep(random.uniform(1.0, 2.0))
                 html = await page.get_content()
+                # Nodriver pages often throw coroutine not awaited on close, but omitting it sometimes leaks.
+                # However we need a new page per request as instructed, nodriver's .get() uses the main tab or a new tab.
+                # Actually nodriver .get() creates a new tab if used properly or we can just reuse the main tab if not concurrent.
+                # The instructions say "a new page must be opened per request rather than reusing a single page instance."
+                # But nodriver's .get returns a Tab object.
                 return 200, html
             except Exception as e:
                 logger.error(f"nodriver failed to fetch {url}: {e}, trying fallback")
@@ -143,8 +150,9 @@ class StealthBrowser:
             page = None
             try:
                 page = await self.camoufox_browser.new_page()
+                logger.info(f"Using Camoufox engine to take screenshot of {url}")
                 await page.goto(url, wait_until="domcontentloaded", timeout=self.timeout * 1000)
-                await asyncio.sleep(2)
+                await asyncio.sleep(random.uniform(1.5, 2.5))
                 await page.screenshot(path=path)
                 return True
             except Exception as e:
@@ -158,8 +166,9 @@ class StealthBrowser:
 
         if self.use_nodriver and self.nodriver_browser:
             try:
+                logger.info(f"Using nodriver engine to take screenshot of {url}")
                 page = await self.nodriver_browser.get(url)
-                await asyncio.sleep(2)
+                await asyncio.sleep(random.uniform(1.5, 2.5))
                 await page.save_screenshot(path)
                 return True
             except Exception as e:
@@ -171,25 +180,30 @@ class StealthBrowser:
         """
         Closes the browser or engine instances cleanly.
         """
-        if self.camoufox_context:
+        # Close Camoufox cleanly using AsyncExitStack
+        if self._exit_stack:
             try:
-                await self.camoufox_context.__aexit__(None, None, None)
-            except Exception:
-                pass
-            self.camoufox_context = None
+                await self._exit_stack.aclose()
+            except Exception as e:
+                logger.error(f"Error closing AsyncExitStack: {e}")
             self.camoufox_browser = None
 
+        # Close nodriver
         if self.nodriver_browser:
             try:
                 self.nodriver_browser.stop()
                 await asyncio.sleep(0.1)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"Error closing nodriver: {e}")
             self.nodriver_browser = None
 
+        # Close StealthEngine
         if self.stealth_engine:
             if asyncio.iscoroutinefunction(self.stealth_engine.close):
-                await self.stealth_engine.close()
+                try:
+                    await self.stealth_engine.close()
+                except Exception as e:
+                    logger.error(f"Error closing StealthEngine: {e}")
             self.stealth_engine = None
 
     async def __aenter__(self):

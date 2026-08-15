@@ -6,25 +6,27 @@ by requesting web pages directly with high-end randomized headers and extracting
 
 import re
 import asyncio
+from contextlib import AsyncExitStack
 from bs4 import BeautifulSoup
 from sherlock_project.stealth_browser import StealthBrowser
 
 class HighEndScraper:
     def __init__(self, timeout: int = 15):
         self.timeout = timeout
+        self._exit_stack = AsyncExitStack()
         self.browser_context = None
         self.browser = None
 
     async def __aenter__(self):
         self.browser_context = StealthBrowser(timeout=self.timeout)
-        self.browser = await self.browser_context.__aenter__()
+        self.browser = await self._exit_stack.enter_async_context(self.browser_context)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if self.browser_context:
-            await self.browser_context.__aexit__(exc_type, exc_val, exc_tb)
-            self.browser_context = None
-            self.browser = None
+        if self._exit_stack:
+            await self._exit_stack.aclose()
+        self.browser_context = None
+        self.browser = None
 
     async def scrape_phone_nl_registries(self, clean_number: str) -> list[dict[str, str]]:
         """
@@ -51,12 +53,12 @@ class HighEndScraper:
                 comments_section = soup.find_all("div", class_="comment-text")
                 if comments_section:
                     for i, comment in enumerate(comments_section[:5], 1):
-                        text = comment.get_text(strip=True)
-                        if text:
+                        text_content = comment.get_text(strip=True)
+                        if text_content:
                             results.append({
                                 "title": f"WieHeeftGebeld.nl - Melding #{i}",
                                 "url": url,
-                                "snippet": text[:200] + "..." if len(text) > 200 else text
+                                "snippet": text_content[:200] + "..." if len(text_content) > 200 else text_content
                             })
                 # Fallback check for user score / evaluation
                 score_box = soup.find("div", class_="rating-badge")
@@ -84,12 +86,12 @@ class HighEndScraper:
                 comment_divs = soup.find_all("div", class_="comment-content")
                 if comment_divs:
                     for i, c_div in enumerate(comment_divs[:5], 1):
-                        text = c_div.get_text(strip=True)
-                        if text:
+                        text_content = c_div.get_text(strip=True)
+                        if text_content:
                             results.append({
                                 "title": f"Tellows.nl - Gebruikerscommentaar #{i} (Score: {score_str})",
                                 "url": url,
-                                "snippet": text[:200] + "..." if len(text) > 200 else text
+                                "snippet": text_content[:200] + "..." if len(text_content) > 200 else text_content
                             })
                 elif score:
                     results.append({

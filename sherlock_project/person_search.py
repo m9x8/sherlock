@@ -56,6 +56,6 @@ class PersonOSINT:
                 if progress_callback:
                     progress_callback(current_step, total_steps)
         finally:
-            self.phone_osint.close_driver()
+            pass
 
         return results
