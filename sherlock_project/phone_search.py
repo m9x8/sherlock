@@ -266,8 +266,29 @@ class PhoneOSINT:
         if not (stop_event and stop_event.is_set()):
             from sherlock_project.scraper import HighEndScraper
             try:
-                scraper = HighEndScraper(timeout=self.timeout)
-                scraped_hits = scraper.scrape_phone_nl_registries(clean_national or e164)
+                import asyncio
+
+                async def _scrape_and_close():
+                    scraper = HighEndScraper(timeout=self.timeout)
+                    try:
+                        return await scraper.scrape_phone_nl_registries(clean_national or e164)
+                    finally:
+                        await scraper.close()
+
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+
+                if loop and loop.is_running():
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor(1) as pool:
+                        def run_in_thread():
+                            return asyncio.run(_scrape_and_close())
+                        scraped_hits = pool.submit(run_in_thread).result()
+                else:
+                    scraped_hits = asyncio.run(_scrape_and_close())
+
                 if scraped_hits:
                     if "Adresboeken & Spam-registries" not in results:
                         results["Adresboeken & Spam-registries"] = []

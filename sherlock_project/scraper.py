@@ -5,15 +5,26 @@ by requesting web pages directly with high-end randomized headers and extracting
 """
 
 import re
+import asyncio
 from bs4 import BeautifulSoup
-from sherlock_project.headers import get_high_end_headers
-from damru.bypass import fetch_html_bypass
+from sherlock_project.stealth_browser import StealthBrowser
 
 class HighEndScraper:
     def __init__(self, timeout: int = 15):
         self.timeout = timeout
+        self.browser = None
 
-    def scrape_phone_nl_registries(self, clean_number: str) -> list[dict[str, str]]:
+    async def get_browser(self):
+        if self.browser is None:
+            self.browser = StealthBrowser(timeout=self.timeout)
+        return self.browser
+
+    async def close(self):
+        if self.browser:
+            await self.browser.close()
+            self.browser = None
+
+    async def scrape_phone_nl_registries(self, clean_number: str) -> list[dict[str, str]]:
         """
         Directly scrapes popular Dutch telephone spam/registries like wieheeftgebeld.nl and tellows.nl
         to extract real-time reports and comments regarding the target phone number.
@@ -29,16 +40,12 @@ class HighEndScraper:
         elif search_num.startswith("31") and not search_num.startswith("316"):
             search_num = "0" + search_num[2:]
 
+        browser = await self.get_browser()
+
         # --- 1. WieHeeftGebeld.nl direct scraping ---
         try:
             url = f"https://www.wieheeftgebeld.nl/nummer/{search_num}"
-            headers = get_high_end_headers(referer="https://www.wieheeftgebeld.nl/")
-            status, text = fetch_html_bypass(
-                url=url,
-                user_agent=headers.get("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"),
-                accept_language=headers.get("Accept-Language", "nl-NL,nl;q=0.9,en-US;q=0.8,en;q=0.7"),
-                timeout=self.timeout
-            )
+            status, text = await browser.get_html(url)
             if status == 200 and text:
                 soup = BeautifulSoup(text, "html.parser")
                 comments_section = soup.find_all("div", class_="comment-text")
@@ -67,13 +74,7 @@ class HighEndScraper:
         # --- 2. Tellows.nl direct scraping ---
         try:
             url = f"https://www.tellows.nl/num/{search_num}"
-            headers = get_high_end_headers(referer="https://www.tellows.nl/")
-            status, text = fetch_html_bypass(
-                url=url,
-                user_agent=headers.get("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"),
-                accept_language=headers.get("Accept-Language", "nl-NL,nl;q=0.9,en-US;q=0.8,en;q=0.7"),
-                timeout=self.timeout
-            )
+            status, text = await browser.get_html(url)
             if status == 200 and text:
                 soup = BeautifulSoup(text, "html.parser")
                 # Look for tellows score or user comments
@@ -101,7 +102,7 @@ class HighEndScraper:
 
         return results
 
-    def scrape_company_direct_details(self, company_name: str) -> list[dict[str, str]]:
+    async def scrape_company_direct_details(self, company_name: str) -> list[dict[str, str]]:
         """
         Directly queries open business indexes for live company information and returns validated hits.
         """
@@ -109,17 +110,14 @@ class HighEndScraper:
         if not company_name:
             return results
 
+        browser = await self.get_browser()
+
         try:
             import urllib.parse
             # Query OpenKVK search API or standard landing endpoint
             query_url = f"https://openkvk.nl/zoeken/{urllib.parse.quote(company_name)}"
-            headers = get_high_end_headers(referer="https://openkvk.nl/")
-            status, text = fetch_html_bypass(
-                url=query_url,
-                user_agent=headers.get("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"),
-                accept_language=headers.get("Accept-Language", "nl-NL,nl;q=0.9,en-US;q=0.8,en;q=0.7"),
-                timeout=self.timeout
-            )
+            status, text = await browser.get_html(query_url)
+
             if status == 200 and text:
                 soup = BeautifulSoup(text, "html.parser")
                 # Find search result links on openkvk.nl
