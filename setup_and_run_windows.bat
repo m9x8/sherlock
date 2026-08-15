@@ -78,24 +78,21 @@ if %errorlevel% neq 0 (
     echo [!] Waarschuwing: Updaten van pip is mislukt. We gaan door met de rest van de installatie...
 )
 
-echo [+] Installeren van alle benodigde pakketten...
-%VENV_PYTHON% -m pip install customtkinter phonenumbers python-docx reportlab certifi colorama requests pandas openpyxl tomli requests-futures stem dnspython python-whois shodan holehe socialscan duckduckgo-search --quiet
+echo [+] Project installeren (editable mode, met alle dependencies uit pyproject.toml)...
+%VENV_PYTHON% -m pip install -e .
 if %errorlevel% neq 0 (
-    echo [!] Fout: Installatie van benodigde pakketten via pip is mislukt.
+    echo [!] Fout: Installatie van de lokale Sherlock-project module is mislukt.
     echo/ Controleer uw internetverbinding of proxyinstellingen.
     echo.
     pause
     exit /b 1
 )
 
-:: Also install local project in editable mode
-echo [+] Sherlock-pakket installeren in editable mode...
-%VENV_PYTHON% -m pip install -e . --quiet
+echo [+] Camoufox browser binaries ophalen...
+%VENV_PYTHON% -m camoufox fetch
 if %errorlevel% neq 0 (
-    echo [!] Fout: Installatie van de lokale Sherlock-project module is mislukt.
+    echo [!] Waarschuwing: Kon Camoufox browser binaries niet ophalen. Sommige stealth functies werken mogelijk niet.
     echo.
-    pause
-    exit /b 1
 )
 
 echo [+] Een snelkoppeling op uw Bureaublad aanmaken...
