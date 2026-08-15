@@ -12,24 +12,19 @@ from sherlock_project.stealth_browser import StealthBrowser
 class HighEndScraper:
     def __init__(self, timeout: int = 15):
         self.timeout = timeout
+        self.browser_context = None
         self.browser = None
 
-    async def get_browser(self):
-        if self.browser is None:
-            self.browser = await StealthBrowser(timeout=self.timeout).__aenter__()
-        return self.browser
-
-    async def close(self):
-        if self.browser:
-            await self.browser.__aexit__(None, None, None)
-            self.browser = None
-
     async def __aenter__(self):
-        await self.get_browser()
+        self.browser_context = StealthBrowser(timeout=self.timeout)
+        self.browser = await self.browser_context.__aenter__()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.close()
+        if self.browser_context:
+            await self.browser_context.__aexit__(exc_type, exc_val, exc_tb)
+            self.browser_context = None
+            self.browser = None
 
     async def scrape_phone_nl_registries(self, clean_number: str) -> list[dict[str, str]]:
         """
@@ -47,12 +42,10 @@ class HighEndScraper:
         elif search_num.startswith("31") and not search_num.startswith("316"):
             search_num = "0" + search_num[2:]
 
-        browser = await self.get_browser()
-
         # --- 1. WieHeeftGebeld.nl direct scraping ---
         try:
             url = f"https://www.wieheeftgebeld.nl/nummer/{search_num}"
-            status, text = await browser.get_html(url)
+            status, text = await self.browser.get_html(url)
             if status == 200 and text:
                 soup = BeautifulSoup(text, "html.parser")
                 comments_section = soup.find_all("div", class_="comment-text")
@@ -81,7 +74,7 @@ class HighEndScraper:
         # --- 2. Tellows.nl direct scraping ---
         try:
             url = f"https://www.tellows.nl/num/{search_num}"
-            status, text = await browser.get_html(url)
+            status, text = await self.browser.get_html(url)
             if status == 200 and text:
                 soup = BeautifulSoup(text, "html.parser")
                 # Look for tellows score or user comments
@@ -117,13 +110,11 @@ class HighEndScraper:
         if not company_name:
             return results
 
-        browser = await self.get_browser()
-
         try:
             import urllib.parse
             # Query OpenKVK search API or standard landing endpoint
             query_url = f"https://openkvk.nl/zoeken/{urllib.parse.quote(company_name)}"
-            status, text = await browser.get_html(query_url)
+            status, text = await self.browser.get_html(query_url)
 
             if status == 200 and text:
                 soup = BeautifulSoup(text, "html.parser")

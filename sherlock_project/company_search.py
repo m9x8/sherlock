@@ -212,7 +212,7 @@ class CompanyOSINT:
                 import asyncio
 
                 async def _scrape_and_close():
-                    async with HighEndScraper() as scraper:
+                    async with HighEndScraper(timeout=self.phone_osint.timeout) as scraper:
                         return await scraper.scrape_company_direct_details(company_name)
 
                 try:
