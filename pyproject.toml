@@ -12,7 +12,7 @@ version = "1.0.0"
 description = "High-end, ethical, and stealthy OSINT suite for deep intelligence gathering"
 license = "MIT"
 authors = [
-    "No shit Sherlock <contact@noshitsherlock.io>"
+    "No shit Sherlock"
 ]
 maintainers = [
     "No shit Sherlock"
