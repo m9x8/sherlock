@@ -95,6 +95,18 @@ class DoxProfiler:
         q10 = f"(filetype:pdf OR filetype:xls OR filetype:xlsx OR filetype:doc OR filetype:docx OR filetype:txt OR filetype:csv) ({composite_or}) (vertrouwelijk OR confidential OR dossier OR rapport OR geheim)"
         queries_to_run.append(("Documenten & Verborgen Bestanden", q10))
 
+        # 11. Blogs & Publicaties
+        q11 = f"(site:medium.com OR site:wordpress.com OR site:blogspot.com OR site:tumblr.com OR site:substack.com OR site:ghost.io) ({composite_or})"
+        queries_to_run.append(("Blogs & Publicaties", q11))
+
+        # 12. Sport & Hobby's
+        q12 = f"(site:strava.com OR site:runkeeper.com OR site:chess.com/member OR site:lichess.org/@ OR site:komoot.com OR site:alltrails.com) ({composite_or})"
+        queries_to_run.append(("Sport & Hobby's", q12))
+
+        # 13. Fotografie & Media
+        q13 = f"(site:flickr.com OR site:vimeo.com OR site:soundcloud.com OR site:deviantart.com OR site:behance.net OR site:500px.com OR site:unsplash.com) ({composite_or})"
+        queries_to_run.append(("Fotografie & Media", q13))
+
         total_queries = len(queries_to_run)
         current_query = 0
 
