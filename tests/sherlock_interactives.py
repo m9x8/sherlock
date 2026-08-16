@@ -10,14 +10,21 @@ class Interactives:
         if platform.system() == "Windows":
             command:str = f"py -m sherlock_project {args}"
         else:
-            command:str = f"sherlock {args}"
+            # We want to force CLI evaluation but the GUI might hijack if args are empty
+            # But the tests check for CLI exceptions, so ensure we bypass GUI with dummy or rely on xvfb if it launches
+            command:str = f"python -m sherlock_project {args}"
 
         proc_out:str = ""
         try:
-            proc_out = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
+            env = os.environ.copy()
+            env["PYTHONPATH"] = "."
+            env["DISPLAY"] = "" # Break the display to force fall-back to CLI error when GUI cannot launch
+            proc_out = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, timeout=60, env=env)
             return proc_out.decode()
         except subprocess.CalledProcessError as e:
             raise InteractivesSubprocessError(e.output.decode())
+        except subprocess.TimeoutExpired as e:
+            raise InteractivesSubprocessError(f"Command timed out: {e}")
 
 
     def walk_sherlock_for_files_with(pattern: str) -> list[str]:

@@ -2,16 +2,16 @@
   <br>
   <a href="https://sherlock-project.github.io/" target="_blank"><img src="images/sherlock-logo.png" alt="sherlock"/></a>
   <br>
-  <span>Hunt down social media accounts by username across <a href="https://sherlockproject.xyz/sites">400+ social networks</a></span>
+  <span>Hunt down social media accounts by username across <a href="https://noshitsherlock.io/sites">400+ social networks</a></span>
   <br>
 </p>
 
 <p align="center">
-  <a href="https://sherlockproject.xyz/installation">Installation</a>
+  <a href="https://noshitsherlock.io/installation">Installation</a>
   &nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;
-  <a href="https://sherlockproject.xyz/usage">Usage</a>
+  <a href="https://noshitsherlock.io/usage">Usage</a>
   &nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;
-  <a href="https://sherlockproject.xyz/contribute">Contributing</a>
+  <a href="https://noshitsherlock.io/contribute">Contributing</a>
 </p>
 
 <p align="center">
@@ -34,13 +34,13 @@
 
 | Method | Notes |
 | - | - |
-| `pipx install sherlock-project` | `pip` or [`uv`](https://docs.astral.sh/uv/) may be used in place of `pipx` |
+| `pipx install no-shit-sherlock` | `pip` or [`uv`](https://docs.astral.sh/uv/) may be used in place of `pipx` |
 | `docker run -it --rm sherlock/sherlock` |
-| `dnf install sherlock-project` | |
+| `dnf install no-shit-sherlock` | |
 
 Community-maintained packages are available for Debian (>= 13), Ubuntu (>= 22.10), Homebrew, Kali, and BlackArch. These packages are not directly supported or maintained by the No shit Sherlock Project.
 
-See all alternative installation methods [here](https://sherlockproject.xyz/installation).
+See all alternative installation methods [here](https://noshitsherlock.io/installation).
 
 ## Graphical User Interface (GUI) & Phone OSINT
 
@@ -119,16 +119,16 @@ options:
 
 Thank you to everyone who has contributed to No shit Sherlock! ❤️
 
-<a href="https://github.com/sherlock-project/sherlock/graphs/contributors">
-  <img src="https://contrib.rocks/image?&columns=25&max=10000&&repo=sherlock-project/sherlock" alt="contributors"/>
+<a href="https://github.com/m9x8/no-shit-sherlok/graphs/contributors">
+  <img src="https://contrib.rocks/image?&columns=25&max=10000&&repo=m9x8/no-shit-sherlok" alt="contributors"/>
 </a>
 
 ## Star History
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=sherlock-project/sherlock&type=Date&theme=dark" />
-  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=sherlock-project/sherlock&type=Date" />
-  <img alt="Sherlock Project Star History Chart" src="https://api.star-history.com/svg?repos=sherlock-project/sherlock&type=Date" />
+  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=m9x8/no-shit-sherlok&type=Date&theme=dark" />
+  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=m9x8/no-shit-sherlok&type=Date" />
+  <img alt="Sherlock Project Star History Chart" src="https://api.star-history.com/svg?repos=m9x8/no-shit-sherlok&type=Date" />
 </picture>
 
 ## License

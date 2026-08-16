@@ -39,8 +39,8 @@ jobs:
           API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
         with:
           source-directory: 'output'
-          destination-github-username: 'sherlock-project'
+          destination-github-username: 'm9x8'
           commit-message: 'Updated site list'
-          destination-repository-name: 'sherlockproject.xyz'
+          destination-repository-name: 'noshitsherlock.io'
           user-email: siddharth.dushantha@gmail.com
           target-branch: master

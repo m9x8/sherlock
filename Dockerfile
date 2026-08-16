@@ -13,7 +13,7 @@ FROM python:3.12-slim-bullseye
 WORKDIR /sherlock
 
 ARG VCS_REF= # CHANGE ME ON UPDATE
-ARG VCS_URL="https://github.com/sherlock-project/sherlock"
+ARG VCS_URL="https://github.com/m9x8/no-shit-sherlok"
 ARG VERSION_TAG= # CHANGE ME ON UPDATE
 
 ENV SHERLOCK_ENV=docker
@@ -22,7 +22,7 @@ LABEL org.label-schema.vcs-ref=$VCS_REF \
       org.label-schema.vcs-url=$VCS_URL \
       org.label-schema.name="Sherlock" \
       org.label-schema.version=$VERSION_TAG \
-      website="https://sherlockproject.xyz"
+      website="https://noshitsherlock.io"
 
 RUN pip3 install --no-cache-dir sherlock-project==$VERSION_TAG
 

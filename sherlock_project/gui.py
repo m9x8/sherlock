@@ -358,10 +358,48 @@ class SherlockGUI(ctk.CTk):
         disclaimer = EthicalDisclaimerWindow(self)
         self.wait_window(disclaimer)
 
+        self.after(600, self._check_camoufox_available)
 
         self.title(f"{self.get_text('title')} v{__version__}")
         self.geometry("1150x850")
         self.minsize(1000, 700)
+
+    def _check_camoufox_available(self):
+        """Check if Camoufox is fully available, including its binaries. Done async to prevent blocking."""
+        def run_check():
+            try:
+                from camoufox.async_api import AsyncCamoufox
+                import asyncio
+                async def _check():
+                    try:
+                        async with AsyncCamoufox(headless=True) as browser:
+                            pass
+                        return True
+                    except Exception as e:
+                        return str(e)
+
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                res = loop.run_until_complete(_check())
+                loop.close()
+
+                if isinstance(res, str):
+                    self.after(0, lambda: messagebox.showwarning(
+                        "Waarschuwing: Camoufox Binaries Ontbreken",
+                        "Camoufox kon niet correct starten. Waarschijnlijk ontbreken de benodigde browser binaries.\n\n"
+                        "Zorg ervoor dat je het volgende commando hebt uitgevoerd:\n"
+                        "python -m camoufox fetch\n\n"
+                        "Sommige stealth functies en integraties zullen mogelijk niet werken.\n\n"
+                        f"Fout: {res}"
+                    ))
+            except ImportError:
+                 self.after(0, lambda: messagebox.showwarning(
+                        "Waarschuwing: Camoufox Niet Geïnstalleerd",
+                        "Camoufox is niet gevonden op uw systeem. "
+                        "Zorg dat u alle dependencies installeert via Poetry of de setup scripts."
+                    ))
+
+        threading.Thread(target=run_check, daemon=True).start()
 
         # Threadsafe Cancellation & Progress Variables
         self.stop_event = threading.Event()

@@ -8,8 +8,8 @@ import requests
 import secrets
 
 
-MANIFEST_URL = "https://data.sherlockproject.xyz"
-EXCLUSIONS_URL = "https://raw.githubusercontent.com/sherlock-project/sherlock/refs/heads/exclusions/false_positive_exclusions.txt"
+MANIFEST_URL = "https://data.noshitsherlock.io"
+EXCLUSIONS_URL = "https://raw.githubusercontent.com/m9x8/no-shit-sherlok/refs/heads/exclusions/false_positive_exclusions.txt"
 
 class SiteInformation:
     def __init__(self, name, url_home, url_username_format, username_claimed,

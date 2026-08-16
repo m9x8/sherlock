@@ -48,7 +48,7 @@ class CompanyDeepEngine:
 
     async def search_sec_edgar(self, session: AsyncSession, company_name: str) -> dict:
         # SEC EDGAR requires a specific user agent format according to fair access policy.
-        headers = {'User-Agent': 'SherlockProject (contact@sherlockproject.xyz)'}
+        headers = {'User-Agent': 'SherlockProject (contact@noshitsherlock.io)'}
         url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={company_name}&owner=exclude&action=getcompany"
         try:
             response = await session.get(url, headers=headers, timeout=10)

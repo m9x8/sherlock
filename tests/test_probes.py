@@ -34,7 +34,7 @@ class TestLiveTargets:
     # Known positives should only use sites trusted to be reliable and unchanging
     @pytest.mark.parametrize('site,username',[
         ('GitHub', 'ppfeister'),
-        ('GitHub', 'sherlock-project'),
+        ('GitHub', 'm9x8'),
         ('Docker Hub', 'ppfeister'),
         ('Docker Hub', 'sherlock'),
     ])

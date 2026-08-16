@@ -27,4 +27,4 @@ __shortname__   = "No shit Sherlock"
 __longname__    = "No shit Sherlock: Find Usernames Across Social Networks"
 __version__     = get_version()
 
-forge_api_latest_release = "https://api.github.com/repos/sherlock-project/sherlock/releases/latest"
+forge_api_latest_release = "https://api.github.com/repos/m9x8/no-shit-sherlok/releases/latest"

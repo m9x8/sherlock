@@ -20,7 +20,7 @@ def sites_info():
 
 @pytest.fixture(scope="session")
 def remote_schema():
-    schema_url: str = 'https://raw.githubusercontent.com/sherlock-project/sherlock/master/sherlock_project/resources/data.schema.json'
+    schema_url: str = 'https://raw.githubusercontent.com/m9x8/no-shit-sherlok/master/sherlock_project/resources/data.schema.json'
     with urllib.request.urlopen(schema_url) as remoteschema:
         schemadat = json.load(remoteschema)
     yield schemadat
