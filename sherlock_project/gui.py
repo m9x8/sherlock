@@ -370,6 +370,7 @@ class SherlockGUI(ctk.CTk):
             try:
                 from camoufox.async_api import AsyncCamoufox
                 import asyncio
+                from sherlock_project.async_utils import setup_windows_event_loop
                 async def _check():
                     try:
                         async with AsyncCamoufox(headless=True) as browser:
@@ -378,6 +379,7 @@ class SherlockGUI(ctk.CTk):
                     except Exception as e:
                         return str(e)
 
+                setup_windows_event_loop()
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 res = loop.run_until_complete(_check())
@@ -2366,8 +2368,10 @@ class SherlockGUI(ctk.CTk):
 
     def _run_maigret_async(self, username, proxy, top_sites):
         import asyncio
+        from sherlock_project.async_utils import setup_windows_event_loop
         loop = None
         try:
+            setup_windows_event_loop()
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 

@@ -102,7 +102,8 @@ class PhoneOSINT:
         import urllib.parse
         from bs4 import BeautifulSoup
         from sherlock_project.stealth_browser import StealthBrowser
-        import asyncio
+        from sherlock_project.async_utils import run_async_safely
+        from sherlock_project.result_filter import filter_and_rank_results
 
         results = []
         try:
@@ -112,19 +113,7 @@ class PhoneOSINT:
                 async with StealthBrowser(timeout=self.timeout) as browser:
                     return await browser.get_html(url)
 
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
-
-            if loop and loop.is_running():
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor(1) as pool:
-                    def run_in_thread():
-                        return asyncio.run(_fetch())
-                    status, html = pool.submit(run_in_thread).result()
-            else:
-                status, html = asyncio.run(_fetch())
+            status, html = run_async_safely(_fetch())
 
             if status == 200 and html:
                 soup = BeautifulSoup(html, "html.parser")
@@ -150,7 +139,8 @@ class PhoneOSINT:
         except Exception as e:
             import logging
             logging.error(f"Error in _advanced_search: {e}")
-        return results
+
+        return filter_and_rank_results(results, query, top_k=8)
 
     def search_phone_mentions(self, meta: Dict[str, Any], stop_event=None, progress_callback=None) -> Dict[str, List[Dict[str, str]]]:
         """
@@ -262,26 +252,13 @@ class PhoneOSINT:
         # Run high-end direct scraper for Adresboeken & Spam-registries
         if not (stop_event and stop_event.is_set()):
             from sherlock_project.scraper import HighEndScraper
+            from sherlock_project.async_utils import run_async_safely
             try:
-                import asyncio
-
                 async def _scrape_and_close():
                     async with HighEndScraper(timeout=self.timeout) as scraper:
                         return await scraper.scrape_phone_nl_registries(clean_national or e164)
 
-                try:
-                    loop = asyncio.get_running_loop()
-                except RuntimeError:
-                    loop = None
-
-                if loop and loop.is_running():
-                    import concurrent.futures
-                    with concurrent.futures.ThreadPoolExecutor(1) as pool:
-                        def run_in_thread():
-                            return asyncio.run(_scrape_and_close())
-                        scraped_hits = pool.submit(run_in_thread).result()
-                else:
-                    scraped_hits = asyncio.run(_scrape_and_close())
+                scraped_hits = run_async_safely(_scrape_and_close())
 
                 if scraped_hits:
                     if "Adresboeken & Spam-registries" not in results:

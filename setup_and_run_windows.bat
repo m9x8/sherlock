@@ -91,9 +91,22 @@ if %errorlevel% neq 0 (
 echo [+] Camoufox browser binaries ophalen...
 %VENV_PYTHON% -m camoufox fetch
 if %errorlevel% neq 0 (
-    echo [!] Waarschuwing: Kon Camoufox browser binaries niet ophalen. Sommige stealth functies werken mogelijk niet.
+    echo [!] Fout: Kon Camoufox browser binaries niet ophalen.
+    echo Controleer uw internetverbinding of voer het commando handmatig uit:
+    echo %VENV_PYTHON% -m camoufox fetch
     echo.
+    pause
+    exit /b 1
 )
+
+%VENV_PYTHON% -c "from camoufox.async_api import AsyncCamoufox"
+if %errorlevel% neq 0 (
+    echo [!] Fout: Camoufox is niet correct geïnstalleerd.
+    echo.
+    pause
+    exit /b 1
+)
+echo [+] Camoufox browser met succes gedownload en geverifieerd!
 
 echo [+] Een snelkoppeling op uw Bureaublad aanmaken...
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$desktop = [Environment]::GetFolderPath('Desktop'); $WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut(\"$desktop\No shit Sherlock.lnk\"); $Shortcut.TargetPath = '%~dp0run_gui.bat'; $Shortcut.WorkingDirectory = '%~dp0'; $Shortcut.IconLocation = 'shell32.dll,22'; $Shortcut.Save()" >nul 2>&1
