@@ -1454,38 +1454,40 @@ class SherlockGUI(ctk.CTk):
         self.search_thread.start()
 
     def _run_username_search(self, username):
-        site_data_all = {site.name: site.information for site in self.sites} if self.sites else {}
-        if not self.nsfw_var.get():
-            site_data = {k: v for k, v in site_data_all.items() if not v.get("isNSFW")}
-        else:
-            site_data = site_data_all
+        from sherlock_project.staged_orchestrator import StagedOrchestrator
+        import asyncio
 
-        notify_obj = GUIQueryNotify(
-            update_callback=self._on_search_result_found,
-            status_callback=self._update_search_status,
-            finish_callback=self._on_search_finished
-        )
+        def msg_cb(msg):
+            self.after(0, lambda m=msg: self._insert_text(self.text_username_results, m))
+        def prog_cb(c, t):
+            self.after(0, lambda cur=c, tot=t: self.progress_bar.set(float(cur)/tot))
+        def res_cb(cat, data):
+            pass
 
-        try:
-            # Perform advanced name dorks
-            p = PhoneOSINT()
-            dorks = p.search_username_advanced_dorks(username, stop_event=self.stop_event)
-            self.username_dorks_results = dorks
-            self._update_username_dorks_display()
+        orch = StagedOrchestrator(msg_cb, prog_cb, res_cb)
 
-            # Run Sherlock core
-            results = sherlock(
-                username=username,
-                site_data=site_data,
-                query_notify=notify_obj,
-                timeout=15,
-                stop_event=self.stop_event
-            )
-            self.search_results = results
-        except Exception as e:
-            self._update_search_status(f"Fout tijdens het zoeken: {e}")
-            self._on_search_finished()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
+        self.after(0, lambda: self.progress_bar.configure(mode="determinate"))
+        self.after(0, lambda: self.progress_bar.set(0))
+
+        results = loop.run_until_complete(orch.run_search("username", username, stop_event=self.stop_event))
+
+        for item in results:
+            conf = item.get('confidence', 'low').upper()
+            title = item.get('title', '')
+            url = item.get('url', '')
+            src = item.get('source_tool', '')
+            msg = f"[{conf}] {title}\nLink: {url}\nSource: {src}\n\n"
+            self.after(0, lambda m=msg: self._insert_text(self.text_username_results, m))
+
+        if self.stop_event.is_set():
+            self.after(0, lambda msg=f"\n{self.get_text('search_stopped')}\n": self._insert_text(self.text_username_results, msg))
+
+        self.searching = False
+        self.after(0, lambda: self.progress_bar.set(1.0))
+        self.after(100, lambda: messagebox.showinfo(self.get_text("success"), "Username OSINT lookup voltooid!"))
     def _on_search_result_found(self, site, url, status):
         status_map = {
             "Gevonden": QueryStatus.CLAIMED,
@@ -1554,52 +1556,64 @@ class SherlockGUI(ctk.CTk):
         threading.Thread(target=self._run_phone_search, args=(phone_input,), daemon=True).start()
 
     def _run_phone_search(self, phone_str):
+        from sherlock_project.phone_search import PhoneOSINT
+        from sherlock_project.staged_orchestrator import StagedOrchestrator
+        import asyncio
+
         p = PhoneOSINT()
         meta = p.validate_and_meta(phone_str)
         self.phone_meta = meta
 
-        self._clear_textbox(self.text_phone_meta)
+        self.after(0, lambda: self._clear_textbox(self.text_phone_meta))
         if meta.get("valid"):
-            self._insert_text(self.text_phone_meta, self.get_text("valid_phone"))
-            self._insert_text(self.text_phone_meta, f"E.164 indeling:   {meta['e164']}\n")
-            self._insert_text(self.text_phone_meta, f"Internationaal:   {meta['international']}\n")
-            self._insert_text(self.text_phone_meta, f"Nationaal:        {meta['national']}\n")
-            self._insert_text(self.text_phone_meta, f"Type Lijn:        {meta['type']}\n")
-            self._insert_text(self.text_phone_meta, f"Provider:         {meta['carrier']}\n")
-            self._insert_text(self.text_phone_meta, f"Geregistreerd in: {meta['location']}\n")
-            self._insert_text(self.text_phone_meta, f"Tijdzones:        {', '.join(meta['timezones'])}\n")
+            self.after(0, lambda: self._insert_text(self.text_phone_meta, self.get_text("valid_phone")))
+            self.after(0, lambda m=f"E.164 indeling:   {meta['e164']}\n": self._insert_text(self.text_phone_meta, m))
+            self.after(0, lambda m=f"Internationaal:   {meta['international']}\n": self._insert_text(self.text_phone_meta, m))
+            self.after(0, lambda m=f"Nationaal:        {meta['national']}\n": self._insert_text(self.text_phone_meta, m))
+            self.after(0, lambda m=f"Type Lijn:        {meta['type']}\n": self._insert_text(self.text_phone_meta, m))
+            self.after(0, lambda m=f"Provider:         {meta['carrier']}\n": self._insert_text(self.text_phone_meta, m))
+            self.after(0, lambda m=f"Geregistreerd in: {meta['location']}\n": self._insert_text(self.text_phone_meta, m))
+            self.after(0, lambda m=f"Tijdzones:        {', '.join(meta['timezones'])}\n": self._insert_text(self.text_phone_meta, m))
         else:
-            self._insert_text(self.text_phone_meta, self.get_text("invalid_phone"))
-            self._insert_text(self.text_phone_meta, f"Invoer: {phone_str}\n")
-            self._insert_text(self.text_phone_meta, f"Error details: {meta.get('error') or 'Onbekende fout'}\n")
-
-        if not meta.get("valid"):
-            self._clear_textbox(self.text_phone_mentions)
-            self._insert_text(self.text_phone_mentions, self.get_text("phone_aborted"))
+            self.after(0, lambda: self._insert_text(self.text_phone_meta, self.get_text("invalid_phone")))
+            self.after(0, lambda p=f"Invoer: {phone_str}\n": self._insert_text(self.text_phone_meta, p))
+            err_msg = f"Error details: {meta.get('error') or 'Onbekende fout'}\n"
+            self.after(0, lambda m=err_msg: self._insert_text(self.text_phone_meta, m))
             self.searching = False
-            self.progress_bar_phone.set(1.0)
             return
 
-        def update_progress(current, total):
-            fraction = float(current) / float(total)
-            self.progress_bar_phone.set(fraction)
+        def msg_cb(msg):
+            self.after(0, lambda m=msg: self._insert_text(self.text_phone_advanced, m))
+        def prog_cb(c, t):
+            self.after(0, lambda cur=c, tot=t: self.progress_bar_phone.set(float(cur)/tot))
+        def res_cb(cat, data):
+            pass
 
-        mentions = p.search_phone_advanced_dorks(meta, stop_event=self.stop_event, progress_callback=update_progress)
-        self.phone_results = mentions
+        orch = StagedOrchestrator(msg_cb, prog_cb, res_cb)
 
-        self._clear_textbox(self.text_phone_mentions)
-        for category, items in mentions.items():
-            self._insert_text(self.text_phone_mentions, f"[ {category.upper()} ]\n")
-            if not items:
-                self._insert_text(self.text_phone_mentions, " Geen vermeldingen gevonden.\n\n")
-            else:
-                for item in items:
-                    self._insert_text(self.text_phone_mentions, f"• {item['title']}\n  Link: {item['url']}\n\n")
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        self.after(0, lambda: self._clear_textbox(self.text_phone_mentions))
+        self.after(0, lambda: self._clear_textbox(self.text_phone_advanced))
+
+        results = loop.run_until_complete(orch.run_search("phone", phone_str, stop_event=self.stop_event))
+
+        for item in results:
+            conf = item.get('confidence', 'low').upper()
+            title = item.get('title', '')
+            url = item.get('url', '')
+            src = item.get('source_tool', '')
+            msg = f"[{conf}] {title}\nLink: {url}\nSource: {src}\n\n"
+            self.after(0, lambda m=msg: self._insert_text(self.text_phone_advanced, m))
+
+        if self.stop_event.is_set():
+            msg = f"\n{self.get_text('search_stopped')}\n"
+            self.after(0, lambda m=msg: self._insert_text(self.text_phone_advanced, m))
 
         self.searching = False
-        self.progress_bar_phone.set(1.0)
-        self.after(100, lambda: messagebox.showinfo(self.get_text("success"), "Telefoon OSINT & tracker dorking voltooid!"))
-
+        self.after(0, lambda: self.progress_bar_phone.set(1.0))
+        self.after(100, lambda: messagebox.showinfo(self.get_text("success"), "Telefoon OSINT lookup voltooid!"))
     # COMPANY SEARCH
 
     def start_company_search(self):
@@ -1623,45 +1637,40 @@ class SherlockGUI(ctk.CTk):
         threading.Thread(target=self._run_company_search, args=(company_input,), daemon=True).start()
 
     def _run_company_search(self, company_str):
-        co = CompanyOSINT()
-        selected = self.country_filter_var.get()
-        if selected == self.get_text("nl_country"):
-            country_filter = "Nederland"
-        elif selected == self.get_text("uk_country"):
-            country_filter = "Verenigd Koninkrijk"
-        elif selected == self.get_text("be_country"):
-            country_filter = "België"
-        elif selected == self.get_text("de_country"):
-            country_filter = "Duitsland"
-        elif selected == self.get_text("global_linkedin"):
-            country_filter = "Wereldwijd / LinkedIn"
-        else:
-            country_filter = "Alle"
+        from sherlock_project.staged_orchestrator import StagedOrchestrator
+        import asyncio
 
-        def update_progress(current, total):
-            fraction = float(current) / float(total)
-            self.progress_bar_company.set(fraction)
+        def msg_cb(msg):
+            self.after(0, lambda m=msg: self._insert_text(self.text_company_results, m))
+        def prog_cb(c, t):
+            self.after(0, lambda cur=c, tot=t: self.progress_bar_company.set(float(cur)/tot))
+        def res_cb(cat, data):
+            pass
 
-        results = co.search_company(company_str, country_filter, stop_event=self.stop_event, progress_callback=update_progress)
-        self.company_results = results
+        orch = StagedOrchestrator(msg_cb, prog_cb, res_cb)
 
-        self._clear_textbox(self.text_company_results)
-        total_hits = 0
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
-        for country, items in results.items():
-            self._insert_text(self.text_company_results, f"[ CATEGORIE / LAND: {country.upper()} ]\n")
-            if not items:
-                self._insert_text(self.text_company_results, " Geen vermeldingen gevonden in de geselecteerde registers.\n\n")
-            else:
-                for item in items:
-                    register_name = item.get("register", "Onbekend Register")
-                    self._insert_text(self.text_company_results, f"• [{register_name}] {item['title']}\n  Link: {item['url']}\n\n")
-                    total_hits += 1
+        self.after(0, lambda: self._clear_textbox(self.text_company_results))
+
+        results = loop.run_until_complete(orch.run_search("company", company_str, stop_event=self.stop_event))
+
+        for item in results:
+            conf = item.get('confidence', 'low').upper()
+            title = item.get('title', '')
+            url = item.get('url', '')
+            src = item.get('source_tool', '')
+            msg = f"[{conf}] {title}\nLink: {url}\nSource: {src}\n\n"
+            self.after(0, lambda m=msg: self._insert_text(self.text_company_results, m))
+
+        if self.stop_event.is_set():
+            msg = f"\n{self.get_text('search_stopped')}\n"
+            self.after(0, lambda m=msg: self._insert_text(self.text_company_results, m))
 
         self.searching = False
-        self.progress_bar_company.set(1.0)
-        self.after(100, lambda: messagebox.showinfo(self.get_text("success"), self.get_text("company_hits_found").format(count=total_hits)))
-
+        self.after(0, lambda: self.progress_bar_company.set(1.0))
+        self.after(100, lambda r=results: messagebox.showinfo(self.get_text("success"), f"Bedrijfs OSINT lookup voltooid!\n\nGevonden vermeldingen: {len(r)}"))
     # EMAIL SEARCH (holehe & socialscan)
 
     def start_email_search(self):
@@ -1889,31 +1898,40 @@ class SherlockGUI(ctk.CTk):
         threading.Thread(target=self._run_person_search, args=(first, last, extra), daemon=True).start()
 
     def _run_person_search(self, first, last, extra):
-        po = PersonOSINT()
+        from sherlock_project.staged_orchestrator import StagedOrchestrator
+        import asyncio
 
-        def update_progress(current, total):
-            fraction = float(current) / float(total)
-            self.progress_bar_person.set(fraction)
+        def msg_cb(msg):
+            self.after(0, lambda m=msg: self._insert_text(self.text_person_results, m))
+        def prog_cb(c, t):
+            self.after(0, lambda cur=c, tot=t: self.progress_bar_person.set(float(cur)/tot))
+        def res_cb(cat, data):
+            pass
 
-        results = po.search_person(first, last, extra, stop_event=self.stop_event, progress_callback=update_progress)
-        self.person_results = results
+        orch = StagedOrchestrator(msg_cb, prog_cb, res_cb)
 
-        self._clear_textbox(self.text_person_results)
-        for category, items in results.items():
-            self._insert_text(self.text_person_results, f"[ {category.upper()} ]\n")
-            if not items:
-                self._insert_text(self.text_person_results, " Geen vermeldingen gevonden.\n\n")
-            else:
-                for item in items:
-                    self._insert_text(self.text_person_results, f"• {item['title']}\n  Link: {item['url']}\n\n")
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        self.after(0, lambda: self._clear_textbox(self.text_person_results))
+
+        results = loop.run_until_complete(orch.run_search("person", (first, last, extra), stop_event=self.stop_event))
+
+        for item in results:
+            conf = item.get('confidence', 'low').upper()
+            title = item.get('title', '')
+            url = item.get('url', '')
+            src = item.get('source_tool', '')
+            msg = f"[{conf}] {title}\nLink: {url}\nSource: {src}\n\n"
+            self.after(0, lambda m=msg: self._insert_text(self.text_person_results, m))
 
         if self.stop_event.is_set():
-            self._insert_text(self.text_person_results, f"\n{self.get_text('search_stopped')}\n")
+            msg_stop = f"\n{self.get_text('search_stopped')}\n"
+            self.after(0, lambda m=msg_stop: self._insert_text(self.text_person_results, m))
 
         self.searching = False
-        self.progress_bar_person.set(1.0)
+        self.after(0, lambda: self.progress_bar_person.set(1.0))
         self.after(100, lambda: messagebox.showinfo(self.get_text("success"), "Personen OSINT lookup voltooid!"))
-
     # DOX SEARCH
 
     def start_dox_search(self):
@@ -2367,6 +2385,7 @@ class SherlockGUI(ctk.CTk):
         threading.Thread(target=self._run_maigret_async, args=(username, proxy, top_sites), daemon=True).start()
 
     def _run_maigret_async(self, username, proxy, top_sites):
+        from sherlock_project.staged_orchestrator import StagedOrchestrator
         import asyncio
         from sherlock_project.async_utils import setup_windows_event_loop
         loop = None
@@ -2375,9 +2394,15 @@ class SherlockGUI(ctk.CTk):
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-            # Initialize Maigret engine without logger if it's missing to avoid AttributeError
-            engine = MaigretEngine(logger=getattr(self, 'logger', None))
-            results = loop.run_until_complete(engine.search(username, timeout=10, proxy=proxy, top=top_sites))
+            def msg_cb(msg):
+                pass
+            def prog_cb(c, t):
+                pass
+            def res_cb(cat, data):
+                pass
+
+            orch = StagedOrchestrator(msg_cb, prog_cb, res_cb)
+            results = loop.run_until_complete(orch.run_search("username", username, stop_event=self.stop_event))
 
             self.after(0, self._on_maigret_complete, results)
         except Exception as e:
@@ -2385,7 +2410,6 @@ class SherlockGUI(ctk.CTk):
         finally:
             if loop:
                 loop.close()
-
     def _on_maigret_complete(self, results):
         self.maigret_progress.stop()
         self.maigret_progress.set(1)
@@ -2396,19 +2420,14 @@ class SherlockGUI(ctk.CTk):
             self.maigret_result_box.insert("end", "[-] No accounts found.\n")
             return
 
-        self.maigret_result_box.insert("end", f"[+] Found {len(results)} accounts:\n", "header")
+        msg1 = f"[+] Found {len(results)} accounts:\n"
+        self.maigret_result_box.insert("end", msg1, "header")
         for res in results:
-            self.maigret_result_box.insert("end", f" - {res['site']}: ", "header")
-            self.maigret_result_box.insert("end", f"{res['url_user']}\n", "found")
-
-            # Print additional profile data if any
-            data = res.get('data', {})
-            if data:
-                for k, v in data.items():
-                    if v:
-                        self.maigret_result_box.insert("end", f"      {k}: {v}\n")
+            msg_title = f" - {res.get('title', 'Unknown')}: "
+            self.maigret_result_box.insert("end", msg_title, "header")
+            msg_url = f"{res.get('url', '')}\n"
+            self.maigret_result_box.insert("end", msg_url, "found")
         self.maigret_result_box.insert("end", "\n[*] Deep Search Completed.\n", "header")
-
     def _on_maigret_error(self, err):
         self.maigret_progress.stop()
         self.maigret_progress.set(0)
