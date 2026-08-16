@@ -88,6 +88,16 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+echo [+] Holehe installeren...
+%VENV_PYTHON% -m pip install holehe
+if %errorlevel% neq 0 (
+    echo [!] Waarschuwing: Installatie van holehe is mislukt.
+    echo/ Controleer uw internetverbinding of proxyinstellingen.
+    echo.
+    pause
+    exit /b 1
+)
+
 echo [+] Camoufox browser binaries ophalen...
 %VENV_PYTHON% -m camoufox fetch
 if %errorlevel% neq 0 (

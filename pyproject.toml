@@ -67,6 +67,7 @@ geopy = "^2.5.0"
 maigret = {git = "https://github.com/m9x8/maigreta.git"}
 nodriver = "^0.50.3"
 camoufox = {extras = ["geoip"], version = "*"}
+holehe = "*"
 
 [tool.poetry.group.dev.dependencies]
 jsonschema = "^4.0.0"
