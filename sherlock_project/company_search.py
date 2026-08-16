@@ -30,12 +30,16 @@ class CompanyOSINT:
                 "CompanyInfo (NL)": f"site:companyinfo.nl {escaped_name}",
                 "OpenKVK (NL)": f'site:openkvk.nl OR site:opencorporates.com/companies/nl {escaped_name} -inurl:dataservice',
                 "Drimble (NL)": f"site:drimble.nl {escaped_name}",
+                "Oozo (NL)": f"site:oozo.nl/bedrijven {escaped_name}",
                 "Companies House (UK)": f"site:find-and-update.company-information.service.gov.uk {escaped_name}",
                 "Handelsregister (DE)": f"site:handelsregister.de {escaped_name}",
+                "North Data (EU)": f"site:northdata.com OR site:northdata.de {escaped_name}",
                 "KBO / KBO-BCE (BE)": f"site:kbopub.economie.fgov.be {escaped_name}",
                 "OpenCorporates Global": f"site:opencorporates.com {escaped_name} -site:opencorporates.com/companies/nl -site:opencorporates.com/companies/gb",
                 "Kompass (Global)": f"site:kompass.com {escaped_name}",
-                "Dun & Bradstreet": f"site:dnb.com {escaped_name}"
+                "Dun & Bradstreet": f"site:dnb.com {escaped_name}",
+                "Crunchbase": f"site:crunchbase.com/organization {escaped_name}",
+                "ZoomInfo": f"site:zoominfo.com/c {escaped_name}"
             },
             "Social Media & Profielen": {
                 "LinkedIn": f"site:linkedin.com/company {escaped_name}",
