@@ -7,21 +7,19 @@ build-backend = "poetry.core.masonry.api"
 source = "init"
 
 [tool.poetry]
-name = "sherlock-project"
-version = "0.16.1"
-description = "Hunt down social media accounts by username across social networks"
+name = "no-shit-sherlock"
+version = "1.0.0"
+description = "High-end, ethical, and stealthy OSINT suite for deep intelligence gathering"
 license = "MIT"
 authors = [
-    "Siddharth Dushantha <siddharth.dushantha@gmail.com>"
+    "No shit Sherlock <contact@noshitsherlock.io>"
 ]
 maintainers = [
-    "Paul Pfeister <code@pfeister.dev>",
-    "Matheus Felipe <matheusfelipeog@protonmail.com>",
-    "Sondre Karlsen Dyrnes <sondre@villdyr.no>"
+    "No shit Sherlock"
 ]
 readme = "docs/pyproject/README.md"
 packages = [ { include = "sherlock_project"} ]
-keywords = [ "osint", "reconnaissance", "information gathering" ]
+keywords = [ "osint", "reconnaissance", "information gathering", "stealth", "dox", "ethical" ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -29,18 +27,16 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
     "Topic :: Security"
 ]
-homepage = "https://sherlockproject.xyz/"
-repository = "https://github.com/sherlock-project/sherlock"
+homepage = "https://github.com/m9x8/no-shit-sherlok"
+repository = "https://github.com/m9x8/no-shit-sherlok"
 
 
 [tool.poetry.urls]
-"Bug Tracker" = "https://github.com/sherlock-project/sherlock/issues"
+"Bug Tracker" = "https://github.com/m9x8/no-shit-sherlok/issues"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
@@ -78,6 +74,7 @@ rstr = "^3.2.2"
 pytest = "^8.4.2"
 pytest-xdist = "^3.8.0"
 pyinstaller = {markers = "python_version < \"3.13\"", version = "^6.22.0"}
+pytest-asyncio = "^1.4.0"
 
 
 [tool.poetry.group.ci.dependencies]

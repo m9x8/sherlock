@@ -2,7 +2,7 @@
 
 [![Sherlock Actor](https://apify.com/actor-badge?actor=netmilk/sherlock)](https://apify.com/netmilk/sherlock?fpr=sherlock)
 
-This Actor wraps the [Sherlock Project](https://sherlockproject.xyz/) to provide serverless username reconnaissance across social networks in the cloud. It helps you find usernames across multiple social media platforms without installing and running the tool locally.
+This Actor wraps the [Sherlock Project](https://noshitsherlock.io/) to provide serverless username reconnaissance across social networks in the cloud. It helps you find usernames across multiple social media platforms without installing and running the tool locally.
 
 ## What are Actors?
 [Actors](https://docs.apify.com/platform/actors?fpr=sherlock) are serverless microservices running on the [Apify Platform](https://apify.com/?fpr=sherlock). They are based on the [Actor SDK](https://docs.apify.com/sdk/js?fpr=sherlock) and can be found in the [Apify Store](https://apify.com/store?fpr=sherlock). Learn more about Actors in the [Apify Whitepaper](https://whitepaper.actor?fpr=sherlock).
@@ -90,4 +90,4 @@ The Actor provides three types of outputs:
   - Varies based on number of sites checked and response times
 
 
-For more help, check the [Sherlock Project documentation](https://github.com/sherlock-project/sherlock) or raise an issue in the Actor's repository.
+For more help, check the [Sherlock Project documentation](https://github.com/m9x8/no-shit-sherlok) or raise an issue in the Actor's repository.

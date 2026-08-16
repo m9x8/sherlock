@@ -13,7 +13,7 @@ try:
     from sherlock_project.__init__ import import_error_test_var # noqa: F401
 except ImportError:
     print("Did you run Sherlock with `python3 sherlock/sherlock.py ...`?")
-    print("This is an outdated method. Please see https://sherlockproject.xyz/installation for up to date instructions.")
+    print("This is an outdated method. Please see https://noshitsherlock.io/installation for up to date instructions.")
     sys.exit(1)
 
 import csv
@@ -771,7 +771,7 @@ def main():
                 # If --json parameter is a number, interpret it as a pull request number
                 if args.json_file.isnumeric():
                     pull_number = args.json_file
-                    pull_url = f"https://api.github.com/repos/sherlock-project/sherlock/pulls/{pull_number}"
+                    pull_url = f"https://api.github.com/repos/m9x8/no-shit-sherlok/pulls/{pull_number}"
                     pull_request_raw = requests.get(pull_url, timeout=10).text
                     pull_request_json = json_loads(pull_request_raw)
 
@@ -781,7 +781,7 @@ def main():
                         sys.exit(1)
 
                     head_commit_sha = pull_request_json["head"]["sha"]
-                    json_file_location = f"https://raw.githubusercontent.com/sherlock-project/sherlock/{head_commit_sha}/sherlock_project/resources/data.json"
+                    json_file_location = f"https://raw.githubusercontent.com/m9x8/no-shit-sherlok/{head_commit_sha}/sherlock_project/resources/data.json"
 
             sites = SitesInformation(
                 data_file_path=json_file_location,

@@ -8,4 +8,4 @@ Sherlock is a forward looking project. Only the latest and most current version 
 
 Security concerns can be submitted [__here__][report-url] without risk of exposing sensitive information. For issues that are low severity or unlikely to see exploitation, public issues are often acceptable.
 
-[report-url]: https://github.com/sherlock-project/sherlock/security/advisories/new
+[report-url]: https://github.com/m9x8/no-shit-sherlok/security/advisories/new

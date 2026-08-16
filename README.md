@@ -1,6 +1,6 @@
-# Sherlock High-End OSINT Engine
+# No shit Sherlock - High-End OSINT Engine
 
-Welcome to the **Sherlock OSINT Engine**. This represents a fully standalone, zero-API, high-end reconnaissance framework designed for modern Open Source Intelligence (OSINT) gathering. By leveraging an advanced asynchronous core alongside the *Camoufox* cloaking framework, Sherlock easily navigates and extracts data from even the most bot-resistant sources.
+Welcome to **No shit Sherlock**. This represents a fully standalone, zero-API, high-end reconnaissance framework designed for modern Open Source Intelligence (OSINT) gathering. By leveraging an advanced asynchronous core alongside the *Camoufox* cloaking framework, No shit Sherlock easily navigates and extracts data from even the most bot-resistant sources.
 
 **DISCLAIMER & ETHICAL USAGE**
 **This project is only intended to be used for ethical purposes. It should solely be utilized to search for your own digital footprint, or with explicit, documented permission from the target. Any misuse, malicious gathering of intelligence, or violations of privacy laws are strictly prohibited and the responsibility of the user.**
@@ -22,10 +22,18 @@ Ensure you are running a modern Python environment:
 
 ## Installation & Setup
 
+### Windows Automated Setup (Recommended)
+You can automatically install all dependencies, fetch browser binaries, and start the GUI using the provided `.bat` file:
+```cmd
+setup_and_run_windows.bat
+```
+
+### Manual Setup via Poetry
+
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/sherlock-project/sherlock.git
-   cd sherlock
+   git clone https://github.com/m9x8/no-shit-sherlok.git
+   cd no-shit-sherlok
    ```
 
 2. **Install Dependencies via Poetry:**
@@ -40,9 +48,9 @@ Ensure you are running a modern Python environment:
 
 4. **Run the Application:**
    ```bash
-   poetry run python -m sherlock_project.gui
+   poetry run python -m sherlock_project --gui
    ```
-   *Note: In headless environments, you may need to emulate a display (e.g., using `xvfb-run`).*
+   *Note: In headless environments, you may need to emulate a display (e.g., using `xvfb-run -a env PYTHONPATH=. poetry run python -m sherlock_project --gui`).*
 
 ## Architecture Highlights
 
