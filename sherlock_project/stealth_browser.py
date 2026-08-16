@@ -31,7 +31,7 @@ class StealthBrowser:
     If both fail or are unavailable, falls back gracefully to `curl_cffi` via `StealthEngine`.
     """
 
-    def __init__(self, use_nodriver: bool = True, timeout: int = 15, proxy: Optional[str] = None):
+    def __init__(self, use_nodriver: bool = True, timeout: int = 40, proxy: Optional[str] = None):
         self.use_camoufox = CAMOUFOX_AVAILABLE
         self.use_nodriver = use_nodriver and NODRIVER_AVAILABLE
         self.timeout = timeout

@@ -15,7 +15,7 @@ from typing import Dict, List, Any
 from sherlock_project.headers import get_high_end_headers
 
 class PhoneOSINT:
-    def __init__(self, timeout: int = 15):
+    def __init__(self, timeout: int = 40):
         self.timeout = timeout
         self.session = requests.Session()
         self.session.headers.update(get_high_end_headers())
@@ -96,49 +96,112 @@ class PhoneOSINT:
 
     def _advanced_search(self, query: str) -> List[Dict[str, str]]:
         """
-        Performs a search using StealthBrowser abstraction (Camoufox -> Nodriver -> curl_cffi)
+        Performs a multi-engine search using StealthBrowser abstraction (Camoufox -> Nodriver -> curl_cffi)
         to bypass CAPTCHAs and bot-detection, fulfilling the high-end professional search engine requirement.
+        Bing is used as primary, DuckDuckGo as fallback.
         """
+        import asyncio
+        import logging
         import urllib.parse
         from bs4 import BeautifulSoup
         from sherlock_project.stealth_browser import StealthBrowser
         from sherlock_project.async_utils import run_async_safely
         from sherlock_project.result_filter import filter_and_rank_results
 
+        logger = logging.getLogger(__name__)
         results = []
-        try:
-            url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
 
-            async def _fetch():
-                async with StealthBrowser(timeout=self.timeout) as browser:
-                    return await browser.get_html(url)
+        async def _fetch_all():
+            bing_url = f"https://www.bing.com/search?q={urllib.parse.quote(query)}"
+            ddg_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
 
-            status, html = run_async_safely(_fetch())
-
-            if status == 200 and html:
-                soup = BeautifulSoup(html, "html.parser")
-                elements = soup.select(".result__body")
-                for el in elements:
+            async with StealthBrowser(timeout=self.timeout) as browser:
+                # Primary: Bing
+                for attempt in range(2):
                     try:
-                        title_el = el.select_one(".result__title a")
-                        if not title_el:
-                            continue
-                        title = title_el.get_text(strip=True)
-                        href = title_el.get("href")
+                        status, html_content = await browser.get_html(bing_url)
+                        if status == 200 and html_content:
+                            soup = BeautifulSoup(html_content, "html.parser")
 
-                        if href and 'uddg=' in href:
-                            parsed = urllib.parse.parse_qs(urllib.parse.urlparse(href).query)
-                            if 'uddg' in parsed:
-                                href = urllib.parse.unquote(parsed['uddg'][0])
+                            # Basic check for empty/captcha page
+                            if "b_algo" in html_content:
+                                elements = soup.select("li.b_algo")
+                                parsed_results = []
+                                for el in elements:
+                                    try:
+                                        title_el = el.select_one("h2 a")
+                                        if not title_el:
+                                            continue
+                                        title = title_el.get_text(strip=True)
+                                        href = title_el.get("href")
 
-                        snippet_el = el.select_one(".result__snippet")
-                        snippet = snippet_el.get_text(strip=True) if snippet_el else ""
-                        results.append({"title": title, "url": href, "snippet": snippet})
-                    except Exception:
-                        pass
+                                        if not href or href.startswith("javascript"):
+                                            continue
+
+                                        snippet_el = el.select_one(".b_caption p")
+                                        # fallback snippet selectors for Bing
+                                        if not snippet_el:
+                                            snippet_el = el.select_one(".b_algoSlug")
+                                        snippet = snippet_el.get_text(strip=True) if snippet_el else ""
+
+                                        parsed_results.append({"title": title, "url": href, "snippet": snippet})
+                                    except Exception:
+                                        pass
+
+                                if parsed_results:
+                                    return parsed_results
+
+                        logger.warning(f"Bing attempt {attempt + 1} failed or returned 0 hits for URL: {bing_url}")
+                    except Exception as e:
+                        logger.warning(f"Error fetching Bing (attempt {attempt + 1}): {e}")
+
+                    if attempt == 0:
+                        await asyncio.sleep(2) # Short backoff
+
+                # Fallback: DuckDuckGo
+                for attempt in range(2):
+                    try:
+                        status, html_content = await browser.get_html(ddg_url)
+                        if status == 200 and html_content:
+                            soup = BeautifulSoup(html_content, "html.parser")
+                            elements = soup.select(".result__body")
+                            parsed_results = []
+                            for el in elements:
+                                try:
+                                    title_el = el.select_one(".result__title a")
+                                    if not title_el:
+                                        continue
+                                    title = title_el.get_text(strip=True)
+                                    href = title_el.get("href")
+
+                                    if href and 'uddg=' in href:
+                                        parsed = urllib.parse.parse_qs(urllib.parse.urlparse(href).query)
+                                        if 'uddg' in parsed:
+                                            href = urllib.parse.unquote(parsed['uddg'][0])
+
+                                    snippet_el = el.select_one(".result__snippet")
+                                    snippet = snippet_el.get_text(strip=True) if snippet_el else ""
+                                    parsed_results.append({"title": title, "url": href, "snippet": snippet})
+                                except Exception:
+                                    pass
+
+                            if parsed_results:
+                                return parsed_results
+
+                        logger.warning(f"DuckDuckGo attempt {attempt + 1} failed or returned 0 hits for URL: {ddg_url}")
+                    except Exception as e:
+                        logger.warning(f"Error fetching DuckDuckGo (attempt {attempt + 1}): {e}")
+
+                    if attempt == 0:
+                        await asyncio.sleep(2) # Short backoff
+
+                return []
+
+        try:
+            results = run_async_safely(_fetch_all()) or []
         except Exception as e:
             import logging
-            logging.error(f"Error in _advanced_search: {e}")
+            logging.error(f"Error in _advanced_search execution: {e}")
 
         return filter_and_rank_results(results, query, top_k=8)
 
