@@ -6,6 +6,7 @@ Bridges the gap between async reconnaissance engines and the synchronous Tkinter
 import asyncio
 import threading
 import queue
+from sherlock_project.async_utils import setup_windows_event_loop
 
 class UIOrchestrator:
     def __init__(self, gui_callback_msg, gui_callback_progress, gui_callback_result):
@@ -20,6 +21,7 @@ class UIOrchestrator:
         self.gui_callback_progress = gui_callback_progress
         self.gui_callback_result = gui_callback_result
 
+        setup_windows_event_loop()
         self.loop = asyncio.new_event_loop()
         self.worker_thread = threading.Thread(target=self._run_loop, daemon=True)
         self.worker_thread.start()
@@ -36,6 +38,7 @@ class UIOrchestrator:
         Submit an async task to the background event loop.
         Wraps the coroutine to capture its result and post it back to the UI.
         """
+        setup_windows_event_loop()
         async def _wrapper():
             try:
                 result = await coro

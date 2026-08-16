@@ -26,9 +26,9 @@ class CompanyOSINT:
         # Main categories
         categories = {
             "Officiële Registers": {
-                "KVK (NL)": f"site:kvk.nl {escaped_name}",
+                "KVK (NL)": f'site:kvk.nl {escaped_name} -site:schemas.kvk.nl -inurl:incident',
                 "CompanyInfo (NL)": f"site:companyinfo.nl {escaped_name}",
-                "OpenKVK (NL)": f"site:openkvk.nl OR site:opencorporates.com/companies/nl {escaped_name}",
+                "OpenKVK (NL)": f'site:openkvk.nl OR site:opencorporates.com/companies/nl {escaped_name} -inurl:dataservice',
                 "Drimble (NL)": f"site:drimble.nl {escaped_name}",
                 "Companies House (UK)": f"site:find-and-update.company-information.service.gov.uk {escaped_name}",
                 "Handelsregister (DE)": f"site:handelsregister.de {escaped_name}",
@@ -79,9 +79,9 @@ class CompanyOSINT:
         if country_filter == "Nederland":
             filtered_categories = {
                 "Officiële Registers (NL)": {
-                    "KVK (NL)": f"site:kvk.nl {escaped_name}",
+                    "KVK (NL)": f'site:kvk.nl {escaped_name} -site:schemas.kvk.nl -inurl:incident',
                     "CompanyInfo (NL)": f"site:companyinfo.nl {escaped_name}",
-                    "OpenKVK (NL)": f"site:openkvk.nl OR site:opencorporates.com/companies/nl {escaped_name}",
+                    "OpenKVK (NL)": f'site:openkvk.nl OR site:opencorporates.com/companies/nl {escaped_name} -inurl:dataservice',
                     "Drimble (NL)": f"site:drimble.nl {escaped_name}"
                 },
                 "Social Media & Profielen": categories["Social Media & Profielen"],
@@ -190,10 +190,14 @@ class CompanyOSINT:
                 if stop_event and stop_event.is_set():
                     break
                 site_hits = self.phone_osint._advanced_search(query)
-                # Fallback to loose search query if exact matches yield 0 results
+
+                # Loose fallback brings too much noise, skip it unless it's explicitly needed
+                # we rely on the primary advanced search to bring quality hits.
                 if not site_hits:
+                    from sherlock_project.result_filter import filter_and_rank_results
                     loose_query = query.replace(escaped_name, company_name)
-                    site_hits = self.phone_osint._advanced_search(loose_query)
+                    loose_hits = self.phone_osint._advanced_search(loose_query)
+                    site_hits = filter_and_rank_results(loose_hits, query, top_k=5)
 
                 for hit in site_hits:
                     hit["register"] = site_name
@@ -208,26 +212,13 @@ class CompanyOSINT:
         # Run direct OpenKVK scraper fallback if Nederland country was filter or general search
         if not (stop_event and stop_event.is_set()) and country_filter in ["Alle", "Nederland"]:
             from sherlock_project.scraper import HighEndScraper
+            from sherlock_project.async_utils import run_async_safely
             try:
-                import asyncio
-
                 async def _scrape_and_close():
                     async with HighEndScraper(timeout=self.phone_osint.timeout) as scraper:
                         return await scraper.scrape_company_direct_details(company_name)
 
-                try:
-                    loop = asyncio.get_running_loop()
-                except RuntimeError:
-                    loop = None
-
-                if loop and loop.is_running():
-                    import concurrent.futures
-                    with concurrent.futures.ThreadPoolExecutor(1) as pool:
-                        def run_in_thread():
-                            return asyncio.run(_scrape_and_close())
-                        direct_hits = pool.submit(run_in_thread).result()
-                else:
-                    direct_hits = asyncio.run(_scrape_and_close())
+                direct_hits = run_async_safely(_scrape_and_close())
 
                 if direct_hits:
                     target_cat = "Officiële Registers (NL)" if "Officiële Registers (NL)" in results else "Officiële Registers"

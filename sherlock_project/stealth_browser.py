@@ -17,6 +17,9 @@ except ImportError:
     NODRIVER_AVAILABLE = False
 
 from sherlock_project.stealth_engine import StealthEngine
+from sherlock_project.async_utils import setup_windows_event_loop
+
+setup_windows_event_loop()
 
 logger = logging.getLogger(__name__)
 
