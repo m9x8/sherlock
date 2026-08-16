@@ -45,11 +45,11 @@ ctk.set_appearance_mode("Dark")
 # Load a custom modern, sophisticated dark/cyberpunk color theme with deep blues & clean grays
 ctk.set_default_color_theme("dark-blue")
 
-SETTINGS_FILE = os.path.expanduser("~/.sherlock_settings.json")
+SETTINGS_FILE = os.path.expanduser("~/.no_shit_sherlock_settings.json")
 
 TRANSLATIONS = {
     "nl": {
-        "title": "Premium OSINT Intelligence Suite",
+        "title": "No shit Sherlock",
         "tab_username": "Gebruikersnaam Zoeken",
         "tab_phone": "Telefoonnummer Zoeken",
         "tab_company": "Bedrijven Zoeken",
@@ -157,7 +157,7 @@ TRANSLATIONS = {
         "dox_finished": "Dox Dossier succesvol gegenereerd!"
     },
     "en": {
-        "title": "Premium OSINT Intelligence Suite",
+        "title": "No shit Sherlock",
         "tab_username": "Username Search",
         "tab_phone": "Phone Number Search",
         "tab_company": "Company Search",
