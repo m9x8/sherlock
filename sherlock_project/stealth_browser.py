@@ -47,7 +47,12 @@ class StealthBrowser:
         if self.use_camoufox and self.camoufox_browser is None:
             try:
                 # Use geoip=True if a proxy is provided (but we use it by default as requested in the instructions)
-                kwargs = {"headless": True, "geoip": True, "humanize": True}
+                kwargs = {
+                    "headless": True,
+                    "geoip": True,
+                    "humanize": True,
+                    "os": random.choice(["windows", "macos"])
+                }
                 if self.proxy:
                     kwargs["proxy"] = {"server": self.proxy}
 
@@ -109,20 +114,28 @@ class StealthBrowser:
                         pass
 
         if self.use_nodriver and self.nodriver_browser:
+            tab = None
             try:
                 logger.info(f"Using nodriver engine to fetch {url}")
-                page = await self.nodriver_browser.get(url)
-                # Wait for navigation/load slightly and humanize
-                await asyncio.sleep(random.uniform(1.0, 2.0))
-                html = await page.get_content()
-                # Nodriver pages often throw coroutine not awaited on close, but omitting it sometimes leaks.
-                # However we need a new page per request as instructed, nodriver's .get() uses the main tab or a new tab.
-                # Actually nodriver .get() creates a new tab if used properly or we can just reuse the main tab if not concurrent.
-                # The instructions say "a new page must be opened per request rather than reusing a single page instance."
-                # But nodriver's .get returns a Tab object.
+
+                async def fetch_task():
+                    nonlocal tab
+                    tab = await self.nodriver_browser.get(url, new_tab=True)
+                    await asyncio.sleep(random.uniform(1.0, 2.0))
+                    return await tab.get_content()
+
+                html = await asyncio.wait_for(fetch_task(), timeout=self.timeout)
                 return 200, html
+            except asyncio.TimeoutError:
+                logger.error(f"nodriver timed out fetching {url}, trying fallback")
             except Exception as e:
                 logger.error(f"nodriver failed to fetch {url}: {e}, trying fallback")
+            finally:
+                if tab:
+                    try:
+                        await tab.close()
+                    except Exception:
+                        pass
 
         # Fallback using curl_cffi
         if not self.stealth_engine:
@@ -153,7 +166,7 @@ class StealthBrowser:
                 logger.info(f"Using Camoufox engine to take screenshot of {url}")
                 await page.goto(url, wait_until="domcontentloaded", timeout=self.timeout * 1000)
                 await asyncio.sleep(random.uniform(1.5, 2.5))
-                await page.screenshot(path=path)
+                await page.screenshot(path=path, timeout=self.timeout * 1000)
                 return True
             except Exception as e:
                 logger.error(f"Camoufox screenshot failed: {e}")
@@ -165,14 +178,28 @@ class StealthBrowser:
                         pass
 
         if self.use_nodriver and self.nodriver_browser:
+            tab = None
             try:
                 logger.info(f"Using nodriver engine to take screenshot of {url}")
-                page = await self.nodriver_browser.get(url)
-                await asyncio.sleep(random.uniform(1.5, 2.5))
-                await page.save_screenshot(path)
+
+                async def screenshot_task():
+                    nonlocal tab
+                    tab = await self.nodriver_browser.get(url, new_tab=True)
+                    await asyncio.sleep(random.uniform(1.5, 2.5))
+                    await tab.save_screenshot(path)
+
+                await asyncio.wait_for(screenshot_task(), timeout=self.timeout)
                 return True
+            except asyncio.TimeoutError:
+                logger.error(f"nodriver timed out taking screenshot of {url}")
             except Exception as e:
                 logger.error(f"Nodriver screenshot failed: {e}")
+            finally:
+                if tab:
+                    try:
+                        await tab.close()
+                    except Exception:
+                        pass
 
         return False
 
